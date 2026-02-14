@@ -383,7 +383,7 @@ function renderLogin() {
 function renderHome() {
     return `
     <div class="container">
-    <h2>Imagens de Produtos</h2>
+    <h2>Imagens de Produtos AUG</h2>
     <div id="totalCatalogo"></div>
     <input class="input" placeholder="Buscar" id="filtro">
     <div class="grid" id="catalogGrid"></div>
