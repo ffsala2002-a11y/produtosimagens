@@ -218,7 +218,7 @@ async function salvarProdutosBanco(produtos) {
 }
 
 // =============================
-// PARSER TXT
+// PARSER TXT DEFINITIVO
 // =============================
 function parseTxt(text) {
     const linhas = text.split(/\r?\n/);
@@ -227,19 +227,30 @@ function parseTxt(text) {
     linhas.forEach(linha => {
         const clean = linha.trim();
         if (!clean.startsWith("*")) return;
+
         const conteudo = clean.replace(/^\*/, "").trim();
         const partes = conteudo.split(/\s+/);
+
+        // precisa ter pelo menos: nce + algo descricao + saldo + UN + preco
         if (partes.length < 5) return;
 
-        const nce = normalizarNCE(partes[0]);
+        // lendo de trás pra frente (padrão fixo)
         const precoRaw = partes[partes.length - 1];
         const saldoRaw = partes[partes.length - 3];
-        const saldo = parseFloat(saldoRaw.replace(",", "."));
+
         const preco = parseFloat(precoRaw.replace(",", "."));
+        const saldo = parseFloat(saldoRaw.replace(",", "."));
+
+        const nce = normalizarNCE(partes[0]);
+
+        // tudo entre NCE e saldo é descrição
         const descricao = partes.slice(1, partes.length - 3).join(" ").trim();
 
         produtos.push({
-            nce, descricao, saldo: isNaN(saldo) ? 0: saldo, preco: isNaN(preco) ? 0: preco
+            nce,
+            descricao,
+            saldo: isNaN(saldo) ? 0 : saldo,
+            preco: isNaN(preco) ? 0 : preco
         });
     });
 
