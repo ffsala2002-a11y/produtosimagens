@@ -218,7 +218,7 @@ async function salvarProdutosBanco(produtos) {
 }
 
 // =============================
-// PARSER TXT DEFINITIVO
+// PARSER TXT - NCE É O PRIMEIRO
 // =============================
 function parseTxt(text) {
     const linhas = text.split(/\r?\n/);
@@ -231,20 +231,22 @@ function parseTxt(text) {
         const conteudo = clean.replace(/^\*/, "").trim();
         const partes = conteudo.split(/\s+/);
 
-        // precisa ter pelo menos: nce + algo descricao + saldo + UN + preco
         if (partes.length < 5) return;
 
-        // lendo de trás pra frente (padrão fixo)
+        // ✅ NCE REAL = PRIMEIRO CAMPO
+        const nce = normalizarNCE(partes[0]);
+
+        // ✅ PREÇO E SALDO = FINAL
         const precoRaw = partes[partes.length - 1];
         const saldoRaw = partes[partes.length - 3];
 
-        const preco = parseFloat(precoRaw.replace(",", "."));
-        const saldo = parseFloat(saldoRaw.replace(",", "."));
+        const preco = parseFloat((precoRaw || "").replace(",", "."));
+        const saldo = parseFloat((saldoRaw || "").replace(",", "."));
 
-        const nce = normalizarNCE(partes[0]);
-
-        // tudo entre NCE e saldo é descrição
+        // ✅ DESCRIÇÃO = MEIO
         const descricao = partes.slice(1, partes.length - 3).join(" ").trim();
+
+        if (!nce) return;
 
         produtos.push({
             nce,
