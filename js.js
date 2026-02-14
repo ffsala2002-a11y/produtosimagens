@@ -13,27 +13,27 @@ var supabase = window.supabaseClient;
 // =============================
 // MODAL NOTIFICAÇÃO
 // =============================
-function mostrarModal(texto, cor="#2196f3") {
+function mostrarModal(texto, cor = "#2196f3") {
     let modal = document.getElementById("modalAviso");
     if (!modal) {
         modal = document.createElement("div");
         modal.id = "modalAviso";
         modal.innerHTML = `<button onclick="fecharModal()">×</button><span id="modalTexto"></span>`;
         modal.style = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            min-width: 250px;
-            max-width: 350px;
-            background: #fff;
-            border-left: 5px solid ${cor};
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            padding: 15px 20px;
-            z-index: 9999;
-            font-family: sans-serif;
-            display: none;
-            border-radius: 5px;
-            color: #333;
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        min-width: 250px;
+        max-width: 350px;
+        background: #fff;
+        border-left: 5px solid ${cor};
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        padding: 15px 20px;
+        z-index: 9999;
+        font-family: sans-serif;
+        display: none;
+        border-radius: 5px;
+        color: #333;
         `;
         document.body.appendChild(modal);
     }
@@ -44,6 +44,62 @@ function mostrarModal(texto, cor="#2196f3") {
     setTimeout(() => {
         modal.style.display = "none";
     }, 3000);
+}
+
+// =============================
+// FUNÇÃO MODAL DE CONFIRMAÇÃO
+// =============================
+function mostrarConfirmacao(texto, callback) {
+    let modal = document.createElement("div");
+    modal.style = `
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    font-family: sans-serif;
+    `;
+
+    modal.innerHTML = `
+    <div style="background:#fff; padding:20px 30px; border-radius:8px; max-width:400px; text-align:center;">
+    <p style="margin-bottom:20px;">${texto}</p>
+    <button id="modalOk" style="margin-right:10px; padding:8px 16px; background:#4caf50; color:#fff; border:none; border-radius:4px; cursor:pointer;">OK</button>
+    <button id="modalCancelar" style="padding:8px 16px; background:#e53935; color:#fff; border:none; border-radius:4px; cursor:pointer;">Cancelar</button>
+    </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector("#modalOk").onclick = () => {
+        callback(true);
+        modal.remove();
+    };
+
+    modal.querySelector("#modalCancelar").onclick = () => {
+        callback(false);
+        modal.remove();
+    };
+}
+
+// =============================
+// LIMPAR PRODUTOS COM MODAL
+// =============================
+async function limparProdutosBanco() {
+    mostrarConfirmacao("Tem certeza que deseja apagar TODOS os produtos?", async (res) => {
+        if (!res) return;
+
+        const { error } = await supabase.from("produtos").delete().not("id", "is", null);
+        if (error) {
+            console.error(error);
+            mostrarModal("Erro ao limpar produtos", "#e53935");
+            return;
+        }
+
+        mostrarModal("Produtos removidos com sucesso!", "#4caf50");
+        renderAdminGrid();
+    });
 }
 
 function fecharModal() {
@@ -98,14 +154,11 @@ async function isAdminLogado() {
 // DINHEIRO BR
 // =============================
 function dinheiroBR(v) {
-    return Number(v || 0).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL"
-    });
+    return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 // =============================
-// BUSCAR PRODUTOS + IMAGENS
+// BUSCAR PRODUTOS + IMAGENS (ORDENADO ALFABÉTICO)
 // =============================
 async function getProdutosBanco() {
     let todos = [];
@@ -116,7 +169,7 @@ async function getProdutosBanco() {
         const { data, error } = await supabase.from("produtos")
             .select("*")
             .range(inicio, inicio + tamanho - 1)
-            .order("descricao");
+            .order("descricao", { ascending: true });
 
         if (error) { console.log(error); break; }
         if (!data || data.length === 0) break;
@@ -125,8 +178,7 @@ async function getProdutosBanco() {
         inicio += tamanho;
     }
 
-    const { data: imagens } = await supabase.from("produto_imagens")
-        .select("produto_id, nce, url, id");
+    const { data: imagens } = await supabase.from("produto_imagens").select("produto_id, nce, url, id");
 
     for (const p of todos) {
         const chave = normalizarNCE(p.nce);
@@ -135,6 +187,7 @@ async function getProdutosBanco() {
 
     return todos;
 }
+
 
 // =============================
 // SALVAR PRODUTOS
@@ -153,8 +206,12 @@ async function salvarProdutosBanco(produtos) {
 
     for (let i = 0; i < dados.length; i += tamanhoLote) {
         const lote = dados.slice(i, i + tamanhoLote);
-        const { error } = await supabase.from("produtos").insert(lote);
-        if (error) { console.error(error); mostrarModal("Erro ao salvar produtos — veja console", "#e53935"); return; }
+        const {
+            error
+        } = await supabase.from("produtos").insert(lote);
+        if (error) {
+            console.error(error); mostrarModal("Erro ao salvar produtos — veja console", "#e53935"); return;
+        }
     }
 
     mostrarModal("Importação finalizada!", "#4caf50");
@@ -181,7 +238,9 @@ function parseTxt(text) {
         const preco = parseFloat(precoRaw.replace(",", "."));
         const descricao = partes.slice(1, partes.length - 3).join(" ").trim();
 
-        produtos.push({ nce, descricao, saldo: isNaN(saldo) ? 0 : saldo, preco: isNaN(preco) ? 0 : preco });
+        produtos.push({
+            nce, descricao, saldo: isNaN(saldo) ? 0: saldo, preco: isNaN(preco) ? 0: preco
+        });
     });
 
     return produtos;
@@ -193,7 +252,8 @@ function parseTxt(text) {
 async function atualizarBase() {
     document.getElementById("duplicadosView").innerHTML = "";
     await renderAdminGrid();
-    mostrarModal("Base atualizada!", "#4caf50");
+    mostrarModal("Base atualizada!",
+        "#4caf50");
 }
 
 // =============================
@@ -203,19 +263,31 @@ async function uploadImagemProduto(produtoId, input) {
     const files = input.files;
     if (!files || !files.length) return;
 
-    const { data: produto } = await supabase.from("produtos").select("nce").eq("id", produtoId).single();
+    const {
+        data: produto
+    } = await supabase.from("produtos").select("nce").eq("id", produtoId).single();
 
     for (const file of files) {
         const nomeArquivo = produtoId + "_" + Date.now() + "_" + file.name;
 
-        const { error: uploadError } = await supabase.storage.from("produtos").upload(nomeArquivo, file);
-        if (uploadError) { console.error(uploadError); mostrarModal("Erro upload: " + uploadError.message, "#e53935"); return; }
+        const {
+            error: uploadError
+        } = await supabase.storage.from("produtos").upload(nomeArquivo, file);
+        if (uploadError) {
+            console.error(uploadError); mostrarModal("Erro upload: " + uploadError.message, "#e53935"); return;
+        }
 
         const publicUrlData = supabase.storage.from("produtos").getPublicUrl(nomeArquivo);
         const url = publicUrlData?.data?.publicUrl;
 
-        const { error: insertError } = await supabase.from("produto_imagens").insert({ produto_id: produtoId, nce: produto?.nce, url });
-        if (insertError) { console.error(insertError); mostrarModal("Erro ao salvar imagem", "#e53935"); return; }
+        const {
+            error: insertError
+        } = await supabase.from("produto_imagens").insert({
+                produto_id: produtoId, nce: produto?.nce, url
+            });
+        if (insertError) {
+            console.error(insertError); mostrarModal("Erro ao salvar imagem", "#e53935"); return;
+        }
     }
 
     mostrarModal("Imagem enviada!", "#4caf50");
@@ -241,13 +313,13 @@ function nextImg(produtoId) {
     const lista = window.carouselData[produtoId]; if (!lista?.length) return;
     if (carouselIndex[produtoId] == null) carouselIndex[produtoId] = 0;
     carouselIndex[produtoId] = (carouselIndex[produtoId]+1) % lista.length;
-    const el = document.getElementById("img-"+produtoId); if(el) el.src = lista[carouselIndex[produtoId]].url;
+    const el = document.getElementById("img-"+produtoId); if (el) el.src = lista[carouselIndex[produtoId]].url;
 }
 function prevImg(produtoId) {
     const lista = window.carouselData[produtoId]; if (!lista?.length) return;
     if (carouselIndex[produtoId] == null) carouselIndex[produtoId] = 0;
     carouselIndex[produtoId] = (carouselIndex[produtoId]-1+lista.length)%lista.length;
-    const el = document.getElementById("img-"+produtoId); if(el) el.src = lista[carouselIndex[produtoId]].url;
+    const el = document.getElementById("img-"+produtoId); if (el) el.src = lista[carouselIndex[produtoId]].url;
 }
 
 // =============================
@@ -258,14 +330,14 @@ function renderCarousel(imagens, produtoId) {
     window.carouselData[produtoId] = imagens || [];
 
     if (!imagens || !imagens.length) return `
-        <div class="carousel" style="width:100%;height:180px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;margin-bottom:10px;">Sem imagem</div>
+    <div class="carousel" style="width:100%;height:180px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;margin-bottom:10px;">Sem imagem</div>
     `;
 
     return `
     <div class="carousel" style="display:flex;align-items:center;justify-content:center;">
-        <button onclick="prevImg('${produtoId}')">◀</button>
-        <img id="img-${produtoId}" src="${imagens[0].url}" onclick="openZoom('${imagens[0].url}')" style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
-        <button onclick="nextImg('${produtoId}')">▶</button>
+    <button onclick="prevImg('${produtoId}')">◀</button>
+    <img id="img-${produtoId}" src="${imagens[0].url}" onclick="openZoom('${imagens[0].url}')" style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
+    <button onclick="nextImg('${produtoId}')">▶</button>
     </div>
     `;
 }
@@ -328,17 +400,21 @@ function renderAdmin() {
 // =============================
 async function render() {
     const app = document.getElementById("app");
-    if(page==="login"){ app.innerHTML=renderLogin(); }
-    else if(page==="admin"){ app.innerHTML=renderAdmin(); setupAdmin(); }
-    else { app.innerHTML=renderHome(); setupCatalogo(); }
+    if (page === "login") {
+        app.innerHTML = renderLogin();
+    } else if (page === "admin") {
+        app.innerHTML = renderAdmin(); setupAdmin();
+    } else {
+        app.innerHTML = renderHome(); setupCatalogo();
+    }
 }
 
 // =============================
 // ADMIN
 // =============================
 function setupAdmin() {
-    const upload=document.getElementById("txtUpload");
-    const filtro=document.getElementById("filtro");
+    const upload = document.getElementById("txtUpload");
+    const filtro = document.getElementById("filtro");
 
     upload.onchange = e => {
         const file = e.target.files[0];
@@ -358,28 +434,28 @@ function setupAdmin() {
 }
 
 async function renderAdminGrid() {
-    const filtro=document.getElementById("filtro").value.toLowerCase();
+    const filtro = document.getElementById("filtro").value.toLowerCase();
     let produtos = await getProdutosBanco();
-    if(filtro) produtos = produtos.filter(p => (p.descricao+" "+p.nce).toLowerCase().includes(filtro));
+    if (filtro) produtos = produtos.filter(p => (p.descricao+" "+p.nce).toLowerCase().includes(filtro));
 
-    document.getElementById("totalAdmin").innerHTML=`Total: ${produtos.length}`;
+    document.getElementById("totalAdmin").innerHTML = `Total: ${produtos.length}`;
 
-    document.getElementById("adminGrid").innerHTML=produtos.map(p => `
+    document.getElementById("adminGrid").innerHTML = produtos.map(p => `
         <div class="card">
         <b>${p.descricao}</b>
         <div class="small">NCE ${p.nce} | Saldo ${p.saldo} | ${dinheiroBR(p.preco)}</div><br>
         <input type="file" multiple onchange="uploadImagemProduto('${p.id}', this)">
         <div style="margin-top:10px;">
-        ${(p.produto_imagens||[]).map(img=>`
+        ${(p.produto_imagens || []).map(img => `
             <div style="display:inline-block;margin:5px;text-align:center;">
-                <img src="${img.url}" style="width:70px;height:70px;object-fit:cover;display:block;">
-                <button style="background:#e53935;font-size:10px;padding:4px;" onclick="deletarImagem('${img.id}','${p.id}')">Excluir</button>
+            <img src="${img.url}" style="width:70px;height:70px;object-fit:cover;display:block;">
+            <button style="background:#e53935;font-size:10px;padding:4px;" onclick="deletarImagem('${img.id}','${p.id}')">Excluir</button>
             </div>
-        `).join("")}
+            `).join("")}
         </div>
-        <div class="small">${(p.produto_imagens||[]).length} imagens</div>
+        <div class="small">${(p.produto_imagens || []).length} imagens</div>
         </div>
-    `).join("");
+        `).join("");
 }
 
 // =============================
@@ -391,16 +467,16 @@ function setupCatalogo() {
 }
 
 async function renderCatalogGrid() {
-    const filtro=document.getElementById("filtro").value.toLowerCase();
+    const filtro = document.getElementById("filtro").value.toLowerCase();
     let produtos = await getProdutosBanco();
-    if(filtro) produtos = produtos.filter(p => (p.descricao+" "+p.nce).toLowerCase().includes(filtro));
+    if (filtro) produtos = produtos.filter(p => (p.descricao+" "+p.nce).toLowerCase().includes(filtro));
 
-    document.getElementById("totalCatalogo").innerHTML=`Total: ${produtos.length}`;
+    document.getElementById("totalCatalogo").innerHTML = `Total: ${produtos.length}`;
 
-    document.getElementById("catalogGrid").innerHTML=produtos.map(p=>{
-        const imagens=p.produto_imagens||[];
-        return `<div class="card">${renderCarousel(imagens,p.id)}<b>${p.descricao}</b>
-            <div class="small">NCE ${p.nce}<br>Saldo ${p.saldo}<br><b>${dinheiroBR(p.preco)}</b></div></div>`;
+    document.getElementById("catalogGrid").innerHTML = produtos.map(p => {
+        const imagens = p.produto_imagens || [];
+        return `<div class="card">${renderCarousel(imagens, p.id)}<b>${p.descricao}</b>
+        <div class="small">NCE ${p.nce}<br>Saldo ${p.saldo}<br><b>${dinheiroBR(p.preco)}</b></div></div>`;
     }).join("");
 }
 
@@ -408,37 +484,52 @@ async function renderCatalogGrid() {
 // LIMPAR PRODUTOS
 // =============================
 async function limparProdutosBanco() {
-    if(!confirm("Tem certeza que deseja apagar TODOS os produtos?")) return;
+    mostrarConfirmacao("Tem certeza que deseja apagar TODOS os produtos?", async (res) => {
+        if (!res) return; // usuário cancelou
 
-    const { error } = await supabase.from("produtos").delete().not("id","is",null);
-    if(error){ console.error(error); mostrarModal("Erro ao limpar produtos","#e53935"); return; }
+        const {
+            error
+        } = await supabase.from("produtos").delete().not("id", "is", null);
+        if (error) {
+            console.error(error);
+            mostrarModal("Erro ao limpar produtos", "#e53935");
+            return;
+        }
 
-    mostrarModal("Produtos removidos com sucesso!","#4caf50");
-    renderAdminGrid();
+        mostrarModal("Produtos removidos com sucesso!", "#4caf50");
+        renderAdminGrid();
+    });
 }
+
 
 // =============================
 // RELIGAR IMAGENS PELO NCE
 // =============================
 async function religarImagensPorNCE() {
-    const { data: produtos } = await supabase.from("produtos").select("id,nce");
-    const { data: imagens } = await supabase.from("produto_imagens").select("id,nce");
-    if(!produtos||!imagens) return;
+    const {
+        data: produtos
+    } = await supabase.from("produtos").select("id,nce");
+    const {
+        data: imagens
+    } = await supabase.from("produto_imagens").select("id,nce");
+    if (!produtos||!imagens) return;
 
-    const mapa={};
-    for(const p of produtos){
-        const chave=normalizarNCE(p.nce);
-        if(!chave) continue;
-        if(!mapa[chave]) mapa[chave]=[];
+    const mapa = {};
+    for (const p of produtos) {
+        const chave = normalizarNCE(p.nce);
+        if (!chave) continue;
+        if (!mapa[chave]) mapa[chave] = [];
         mapa[chave].push(p.id);
     }
 
-    for(const img of imagens){
-        const chave=normalizarNCE(img.nce);
-        if(!chave) continue;
-        const listaIds=mapa[chave]; if(!listaIds) continue;
-        for(const novoId of listaIds){
-            await supabase.from("produto_imagens").update({produto_id:novoId}).eq("id",img.id);
+    for (const img of imagens) {
+        const chave = normalizarNCE(img.nce);
+        if (!chave) continue;
+        const listaIds = mapa[chave]; if (!listaIds) continue;
+        for (const novoId of listaIds) {
+            await supabase.from("produto_imagens").update({
+                produto_id: novoId
+            }).eq("id", img.id);
         }
     }
 }
