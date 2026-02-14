@@ -218,7 +218,7 @@ async function salvarProdutosBanco(produtos) {
 }
 
 // =============================
-// PARSER TXT - NCE É O PRIMEIRO
+// PARSER TXT
 // =============================
 function parseTxt(text) {
     const linhas = text.split(/\r?\n/);
@@ -233,20 +233,37 @@ function parseTxt(text) {
 
         if (partes.length < 5) return;
 
-        // ✅ NCE REAL = PRIMEIRO CAMPO
-        const nce = normalizarNCE(partes[0]);
+        // =============================
+        // PROCURA O PRIMEIRO NÚMERO GRANDE (>=5 dígitos)
+        // =============================
+        let nce = null;
+        let indexNCE = -1;
 
-        // ✅ PREÇO E SALDO = FINAL
+        for (let i = 0; i < partes.length; i++) {
+            if (/^\d{5,}$/.test(partes[i])) {
+                nce = normalizarNCE(partes[i]);
+                indexNCE = i;
+                break;
+            }
+        }
+
+        if (!nce) return;
+
+        // =============================
+        // SALDO E PREÇO NO FINAL
+        // =============================
         const precoRaw = partes[partes.length - 1];
         const saldoRaw = partes[partes.length - 3];
 
         const preco = parseFloat((precoRaw || "").replace(",", "."));
         const saldo = parseFloat((saldoRaw || "").replace(",", "."));
 
-        // ✅ DESCRIÇÃO = MEIO
-        const descricao = partes.slice(1, partes.length - 3).join(" ").trim();
+        // =============================
+        // DESCRIÇÃO = depois do NCE até o saldo
+        // =============================
+        const descricao = partes.slice(indexNCE + 1, partes.length - 3).join(" ").trim();
 
-        if (!nce) return;
+        console.log("NCE CERTO =>", nce);
 
         produtos.push({
             nce,
@@ -383,7 +400,7 @@ function renderLogin() {
 function renderHome() {
     return `
     <div class="container">
-    <h2>Imagens de Produtos AUG</h2>
+    <h2>Imagens de Produtos</h2>
     <div id="totalCatalogo"></div>
     <input class="input" placeholder="Buscar" id="filtro">
     <div class="grid" id="catalogGrid"></div>
