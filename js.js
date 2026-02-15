@@ -438,27 +438,122 @@ function renderCarousel(imagens, produtoId) {
     window.carouselData[produtoId] = imagens || [];
 
     if (!imagens || !imagens.length) return `
-    <div class="carousel" style="width:100%;height:180px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;margin-bottom:10px;">Sem imagem</div>
+    <div class="carousel" style="width:100%;height:180px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;margin-bottom:10px;">
+        Sem imagem
+    </div>
     `;
 
     return `
     <div class="carousel" style="display:flex;align-items:center;justify-content:center;">
-    <button onclick="prevImg('${produtoId}')">◀</button>
-    <img id="img-${produtoId}" src="${imagens[0].url}" onclick="openZoom('${imagens[0].url}')" style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
-    <button onclick="nextImg('${produtoId}')">▶</button>
+        <button onclick="prevImg('${produtoId}')">◀</button>
+
+        <img id="img-${produtoId}" 
+             src="${imagens[0].url}" 
+             onclick="openZoom('${produtoId}', carouselIndex['${produtoId}'] || 0)"
+             style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
+
+        <button onclick="nextImg('${produtoId}')">▶</button>
     </div>
     `;
 }
 
+
 // =============================
-// ZOOM
+// ZOOM COM CARROSSEL (FIX UI)
 // =============================
-function openZoom(url) {
+function openZoom(produtoId, index = 0) {
+    const imagens = (window.carouselData || {})[produtoId];
+    if (!imagens || !imagens.length) return;
+
+    let atual = index;
+
     const modal = document.createElement("div");
-    modal.style = `position:fixed; inset:0; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; z-index:9999;`;
-    modal.innerHTML = `<img src="${url}" style="max-width:90%;max-height:90%;cursor:zoom-out;">`;
-    modal.onclick = () => modal.remove();
+    modal.style = `
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.95);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:99999;
+    font-family:sans-serif;
+    `;
+
+    modal.innerHTML = `
+    <!-- BOTÃO FECHAR -->
+    <button id="zoomClose" style="
+        position:absolute;
+        top:20px;
+        right:20px;
+        font-size:18px;
+        background:rgba(0,0,0,0.6);
+        color:#fff;
+        border:2px solid #fff;
+        width:45px;
+        height:45px;
+        border-radius:50%;
+        cursor:pointer;
+        z-index:100000;
+    ">✕</button>
+
+    <!-- BOTÃO ANTERIOR -->
+    <button id="zoomPrev" style="
+        position:absolute;
+        left:20px;
+        top:50%;
+        transform:translateY(-50%);
+        font-size:30px;
+        background:rgba(0,0,0,0.5);
+        color:#fff;
+        border:none;
+        width:50px;
+        height:60px;
+        border-radius:8px;
+        cursor:pointer;
+        z-index:100000;
+    ">◀</button>
+
+    <!-- IMAGEM -->
+    <img id="zoomImg" src="${imagens[atual].url}" 
+         style="
+         max-width:90%;
+         max-height:90%;
+         object-fit:contain;
+         z-index:1;
+    ">
+
+    <!-- BOTÃO PRÓXIMO -->
+    <button id="zoomNext" style="
+        position:absolute;
+        right:20px;
+        top:50%;
+        transform:translateY(-50%);
+        font-size:30px;
+        background:rgba(0,0,0,0.5);
+        color:#fff;
+        border:none;
+        width:50px;
+        height:60px;
+        border-radius:8px;
+        cursor:pointer;
+        z-index:100000;
+    ">▶</button>
+    `;
+
     document.body.appendChild(modal);
+
+    // fechar apenas no X
+    modal.querySelector("#zoomClose").onclick = () => modal.remove();
+
+    modal.querySelector("#zoomNext").onclick = () => {
+        atual = (atual + 1) % imagens.length;
+        modal.querySelector("#zoomImg").src = imagens[atual].url;
+    };
+
+    modal.querySelector("#zoomPrev").onclick = () => {
+        atual = (atual - 1 + imagens.length) % imagens.length;
+        modal.querySelector("#zoomImg").src = imagens[atual].url;
+    };
 }
 
 // =============================
@@ -478,7 +573,7 @@ function renderLogin() {
 function renderHome() {
     return `
     <div class="container">
-    <h2>Imagens de Produtos de AUG</h2>
+    <h2>Imagens de Produtos</h2>
     <div id="totalCatalogo"></div>
     <input class="input" placeholder="Buscar" id="filtro">
     <div class="grid" id="catalogGrid"></div>
@@ -491,7 +586,7 @@ function renderAdmin() {
     <div class="container">
     <button onclick="logoutAdmin()">Sair</button>
     <button onclick="atualizarBase()" style="background:#2196f3">Atualizar Base</button>
-    <h2>Admin Produtos de AUG</h2>
+    <h2>Admin Produtos</h2>
     <div id="totalAdmin"></div>
     <input type="file" id="txtUpload">
     <input class="input" placeholder="Filtrar" id="filtro">
@@ -636,6 +731,7 @@ async function limparProdutosBanco() {
     });
 }
 
+
 // =============================
 // RELIGAR IMAGENS PELO NCE
 // =============================
@@ -671,4 +767,4 @@ async function religarImagensPorNCE() {
 // =============================
 // START
 // =============================
-setPage("home");
+setPage("home"); 
