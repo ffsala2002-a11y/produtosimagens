@@ -454,8 +454,6 @@ function renderCarousel(imagens, produtoId) {
 
         <button onclick="nextImg('${produtoId}')">▶</button>
     </div>
-    `;
-}
 
 
 // =============================
@@ -466,6 +464,18 @@ function openZoom(produtoId, index = 0) {
     if (!imagens || !imagens.length) return;
 
     let atual = index;
+
+    const modal = document.createElement("div");
+    modal.style = `
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.95);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:99999;
+    font-family:sans-serif;
+    `;
 
     modal.innerHTML = `
     <!-- BOTÃO FECHAR -->
@@ -545,6 +555,8 @@ function openZoom(produtoId, index = 0) {
         modal.querySelector("#zoomImg").src = imagens[atual].url;
     };
 }
+
+
 
 // =============================
 // VIEWS
