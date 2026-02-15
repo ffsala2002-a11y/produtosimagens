@@ -573,7 +573,7 @@ function renderLogin() {
 function renderHome() {
     return `
     <div class="container">
-    <h2>Imagens de Produtos</h2>
+    <h2>Catálago AUG</h2>
     <div id="totalCatalogo"></div>
     <input class="input" placeholder="Buscar" id="filtro">
     <div class="grid" id="catalogGrid"></div>
@@ -586,7 +586,7 @@ function renderAdmin() {
     <div class="container">
     <button onclick="logoutAdmin()">Sair</button>
     <button onclick="atualizarBase()" style="background:#2196f3">Atualizar Base</button>
-    <h2>Admin Produtos</h2>
+    <h2>Admin Produtos AUG</h2>
     <div id="totalAdmin"></div>
     <input type="file" id="txtUpload">
     <input class="input" placeholder="Filtrar" id="filtro">
