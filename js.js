@@ -10,7 +10,7 @@ if (!window.supabaseClient) {
 
 var supabase = window.supabaseClient;
 
-// ============================ 
+// =============================
 // MODAL NOTIFICAÇÃO
 // =============================
 function mostrarModal(texto, cor = "#2196f3") {
@@ -454,7 +454,9 @@ function renderCarousel(imagens, produtoId) {
 
         <button onclick="nextImg('${produtoId}')">▶</button>
     </div>
+    `;
 }
+
 
 // =============================
 // ZOOM COM CARROSSEL (FIX UI)
@@ -556,8 +558,6 @@ function openZoom(produtoId, index = 0) {
     };
 }
 
-
-
 // =============================
 // VIEWS
 // =============================
@@ -575,7 +575,7 @@ function renderLogin() {
 function renderHome() {
     return `
     <div class="container">
-    <h2>Catálago AUG</h2>
+    <h2>Imagens de Produtos</h2>
     <div id="totalCatalogo"></div>
     <input class="input" placeholder="Buscar" id="filtro">
     <div class="grid" id="catalogGrid"></div>
@@ -588,7 +588,7 @@ function renderAdmin() {
     <div class="container">
     <button onclick="logoutAdmin()">Sair</button>
     <button onclick="atualizarBase()" style="background:#2196f3">Atualizar Base</button>
-    <h2>Admin Produtos AUG</h2>
+    <h2>Admin Produtos</h2>
     <div id="totalAdmin"></div>
     <input type="file" id="txtUpload">
     <input class="input" placeholder="Filtrar" id="filtro">
