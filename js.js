@@ -633,5 +633,39 @@ async function limparProdutosBanco() {
     });
 }
 
+// =============================
+// RELIGAR IMAGENS PELO NCE
+// =============================
+async function religarImagensPorNCE() {
+    const {
+        data: produtos
+    } = await supabase.from("produtos").select("id,nce");
+    const {
+        data: imagens
+    } = await supabase.from("produto_imagens").select("id,nce");
+    if (!produtos||!imagens) return;
 
-// ========
+    const mapa = {};
+    for (const p of produtos) {
+        const chave = normalizarNCE(p.nce);
+        if (!chave) continue;
+        if (!mapa[chave]) mapa[chave] = [];
+        mapa[chave].push(p.id);
+    }
+
+    for (const img of imagens) {
+        const chave = normalizarNCE(img.nce);
+        if (!chave) continue;
+        const listaIds = mapa[chave]; if (!listaIds) continue;
+        for (const novoId of listaIds) {
+            await supabase.from("produto_imagens").update({
+                produto_id: novoId
+            }).eq("id", img.id);
+        }
+    }
+}
+
+// =============================
+// START
+// =============================
+setPage("home");
