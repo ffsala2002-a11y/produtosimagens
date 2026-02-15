@@ -10,7 +10,7 @@ if (!window.supabaseClient) {
 
 var supabase = window.supabaseClient;
 
-// =============================
+// ============================= 
 // MODAL NOTIFICAÇÃO
 // =============================
 function mostrarModal(texto, cor = "#2196f3") {
