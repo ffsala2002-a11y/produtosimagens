@@ -47,6 +47,61 @@ function mostrarModal(texto, cor = "#2196f3") {
 }
 
 // =============================
+// LOADING GLOBAL
+// =============================
+function showLoading(texto = "Carregando...") {
+    let loader = document.getElementById("globalLoader");
+
+    if (!loader) {
+        loader = document.createElement("div");
+        loader.id = "globalLoader";
+        loader.innerHTML = `
+        <div class="loaderBox">
+        <div class="spinner"></div>
+        <div class="loaderText">${texto}</div>
+        </div>`;
+
+        const style = document.createElement("style");
+        style.innerHTML = `
+        #globalLoader{
+        position:fixed;
+        inset:0;
+        background:rgba(255,255,255,0.7);
+        backdrop-filter: blur(3px);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        z-index:99999;
+        font-family:sans-serif;
+        }
+        .loaderBox{text-align:center;}
+        .spinner{
+        width:45px;
+        height:45px;
+        border:5px solid #ddd;
+        border-top:5px solid #2196f3;
+        border-radius:50%;
+        animation:spin .8s linear infinite;
+        margin:0 auto 10px;
+        }
+        @keyframes spin{
+        from{transform:rotate(0deg);}
+        to{transform:rotate(360deg);}
+        }`;
+        document.head.appendChild(style);
+        document.body.appendChild(loader);
+    } else {
+        loader.querySelector(".loaderText").innerHTML = texto;
+        loader.style.display = "flex";
+    }
+}
+
+function hideLoading() {
+    const loader = document.getElementById("globalLoader");
+    if (loader) loader.style.display = "none";
+}
+
+// =============================
 // FUNÇÃO MODAL DE CONFIRMAÇÃO
 // =============================
 function mostrarConfirmacao(texto, callback) {
@@ -90,7 +145,9 @@ async function limparProdutosBanco() {
     mostrarConfirmacao("Tem certeza que deseja apagar TODOS os produtos?", async (res) => {
         if (!res) return;
 
-        const { error } = await supabase.from("produtos").delete().not("id", "is", null);
+        const {
+            error
+        } = await supabase.from("produtos").delete().not("id", "is", null);
         if (error) {
             console.error(error);
             mostrarModal("Erro ao limpar produtos", "#e53935");
@@ -135,7 +192,11 @@ async function setPage(p) {
 // AUTH ADMIN
 // =============================
 async function loginAdmin(email, senha) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+    const {
+        error
+    } = await supabase.auth.signInWithPassword({
+            email, password: senha
+        });
     if (error) return mostrarModal(error.message, "#e53935");
     setPage("admin");
 }
@@ -146,7 +207,9 @@ async function logoutAdmin() {
 }
 
 async function isAdminLogado() {
-    const { data } = await supabase.auth.getSession();
+    const {
+        data
+    } = await supabase.auth.getSession();
     return !!data.session;
 }
 
@@ -154,7 +217,9 @@ async function isAdminLogado() {
 // DINHEIRO BR
 // =============================
 function dinheiroBR(v) {
-    return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    return Number(v || 0).toLocaleString("pt-BR", {
+        style: "currency", currency: "BRL"
+    });
 }
 
 // =============================
@@ -166,19 +231,29 @@ async function getProdutosBanco() {
     const tamanho = 1000;
 
     while (true) {
-        const { data, error } = await supabase.from("produtos")
-            .select("*")
-            .range(inicio, inicio + tamanho - 1)
-            .order("descricao", { ascending: true });
+        const {
+            data,
+            error
+        } = await supabase.from("produtos")
+        .select("*")
+        .range(inicio, inicio + tamanho - 1)
+        .order("descricao", {
+            ascending: true
+        });
 
-        if (error) { console.log(error); break; }
+        if (error) {
+            console.log(error); break;
+        }
         if (!data || data.length === 0) break;
 
-        todos = [...todos, ...data];
+        todos = [...todos,
+            ...data];
         inicio += tamanho;
     }
 
-    const { data: imagens } = await supabase.from("produto_imagens").select("produto_id, nce, url, id");
+    const {
+        data: imagens
+    } = await supabase.from("produto_imagens").select("produto_id, nce, url, id");
 
     for (const p of todos) {
         const chave = normalizarNCE(p.nce);
@@ -268,8 +343,8 @@ function parseTxt(text) {
         produtos.push({
             nce,
             descricao,
-            saldo: isNaN(saldo) ? 0 : saldo,
-            preco: isNaN(preco) ? 0 : preco
+            saldo: isNaN(saldo) ? 0: saldo,
+            preco: isNaN(preco) ? 0: preco
         });
     });
 
@@ -400,7 +475,7 @@ function renderLogin() {
 function renderHome() {
     return `
     <div class="container">
-    <h2>Imagens de Produtos</h2>
+    <h2>Imagens de Produtos de AUG</h2>
     <div id="totalCatalogo"></div>
     <input class="input" placeholder="Buscar" id="filtro">
     <div class="grid" id="catalogGrid"></div>
@@ -413,7 +488,7 @@ function renderAdmin() {
     <div class="container">
     <button onclick="logoutAdmin()">Sair</button>
     <button onclick="atualizarBase()" style="background:#2196f3">Atualizar Base</button>
-    <h2>Admin Produtos</h2>
+    <h2>Admin Produtos de AUG</h2>
     <div id="totalAdmin"></div>
     <input type="file" id="txtUpload">
     <input class="input" placeholder="Filtrar" id="filtro">
@@ -450,11 +525,30 @@ function setupAdmin() {
         const file = e.target.files[0];
         const reader = new FileReader();
         reader.onload = async () => {
-            const novos = parseTxt(reader.result);
-            await salvarProdutosBanco(novos);
-            await religarImagensPorNCE();
-            await atualizarBase();
-            document.getElementById("importInfo").innerHTML = `Importação concluída<br>Total lidos: ${novos.length}`;
+            showLoading("Importando arquivo...");
+
+            const timeout = setTimeout(() => {
+                hideLoading();
+                mostrarModal("Processo demorou demais e foi finalizado.", "#e53935");
+            }, 1000); //segundos
+
+            try {
+                const novos = parseTxt(reader.result);
+
+                await salvarProdutosBanco(novos);
+                await religarImagensPorNCE();
+                await atualizarBase();
+
+                document.getElementById("importInfo").innerHTML =
+                `Importação concluída<br>Total lidos: ${novos.length}`;
+
+            } catch (e) {
+                console.error(e);
+                mostrarModal("Erro durante importação.", "#e53935");
+            } finally {
+                clearTimeout(timeout);
+                hideLoading();
+            }
         };
         reader.readAsText(file);
     };
@@ -464,6 +558,8 @@ function setupAdmin() {
 }
 
 async function renderAdminGrid() {
+    showLoading("Carregando produtos...");
+
     const filtro = document.getElementById("filtro").value.toLowerCase();
     let produtos = await getProdutosBanco();
     if (filtro) produtos = produtos.filter(p => (p.descricao+" "+p.nce).toLowerCase().includes(filtro));
@@ -486,6 +582,8 @@ async function renderAdminGrid() {
         <div class="small">${(p.produto_imagens || []).length} imagens</div>
         </div>
         `).join("");
+
+    hideLoading();
 }
 
 // =============================
@@ -497,6 +595,8 @@ function setupCatalogo() {
 }
 
 async function renderCatalogGrid() {
+    showLoading("Carregando catálogo...");
+
     const filtro = document.getElementById("filtro").value.toLowerCase();
     let produtos = await getProdutosBanco();
     if (filtro) produtos = produtos.filter(p => (p.descricao+" "+p.nce).toLowerCase().includes(filtro));
@@ -508,6 +608,8 @@ async function renderCatalogGrid() {
         return `<div class="card">${renderCarousel(imagens, p.id)}<b>${p.descricao}</b>
         <div class="small">NCE ${p.nce}<br>Saldo ${p.saldo}<br><b>${dinheiroBR(p.preco)}</b></div></div>`;
     }).join("");
+
+    hideLoading();
 }
 
 // =============================
@@ -532,39 +634,4 @@ async function limparProdutosBanco() {
 }
 
 
-// =============================
-// RELIGAR IMAGENS PELO NCE
-// =============================
-async function religarImagensPorNCE() {
-    const {
-        data: produtos
-    } = await supabase.from("produtos").select("id,nce");
-    const {
-        data: imagens
-    } = await supabase.from("produto_imagens").select("id,nce");
-    if (!produtos||!imagens) return;
-
-    const mapa = {};
-    for (const p of produtos) {
-        const chave = normalizarNCE(p.nce);
-        if (!chave) continue;
-        if (!mapa[chave]) mapa[chave] = [];
-        mapa[chave].push(p.id);
-    }
-
-    for (const img of imagens) {
-        const chave = normalizarNCE(img.nce);
-        if (!chave) continue;
-        const listaIds = mapa[chave]; if (!listaIds) continue;
-        for (const novoId of listaIds) {
-            await supabase.from("produto_imagens").update({
-                produto_id: novoId
-            }).eq("id", img.id);
-        }
-    }
-}
-
-// =============================
-// START
-// =============================
-setPage("home");
+// ========
