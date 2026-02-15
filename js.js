@@ -454,7 +454,7 @@ function renderCarousel(imagens, produtoId) {
 
         <button onclick="nextImg('${produtoId}')">▶</button>
     </div>
-
+}
 
 // =============================
 // ZOOM COM CARROSSEL (FIX UI)
