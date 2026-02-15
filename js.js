@@ -486,7 +486,7 @@ function openZoom(produtoId, index = 0) {
         top:60px;
         right:50px;
         font-size:18px;
-        background:rgba(255, 0, 0, 0.50);
+        background:rgba(255, 255, 255, 0.8);
         color:#fff;
         border:2px solid #fff;
         width:100px;
@@ -504,8 +504,8 @@ function openZoom(produtoId, index = 0) {
         top:50%;
         transform:translateY(-50%);
         font-size:45px;
-        background:rgba(0, 210, 0, 0.89);
-        color:#fff;
+        background:rgba(214, 207, 207, 0.97;
+        color:rgb(0, 0, 0);
         border:none;
         width:70px;
         height:70px;
@@ -531,8 +531,8 @@ function openZoom(produtoId, index = 0) {
         top:50%;
         transform:translateY(-50%);
         font-size:45px;
-        background:rgba(0, 210, 0, 0.89);
-        color:#fff;
+        background:rgba(214, 207, 207, 0.97;
+        color:rgb(0, 0, 0);
         border:none;
         width:70px;
         height:70px;
