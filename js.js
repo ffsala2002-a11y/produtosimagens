@@ -81,7 +81,7 @@ function showLoading(texto = "Carregando...") {
         .spinner{
         width:45px;
         height:45px;
-        border:5px solid #ddd;
+        border:5px solid rgb(0, 232, 0);
         border-top:5px solid #2196f3;
         border-radius:50%;
         animation:spin .8s linear infinite;
