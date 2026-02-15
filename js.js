@@ -467,34 +467,23 @@ function openZoom(produtoId, index = 0) {
 
     let atual = index;
 
-    const modal = document.createElement("div");
-    modal.style = `
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.95);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:99999;
-    font-family:sans-serif;
-    `;
-
     modal.innerHTML = `
     <!-- BOTÃO FECHAR -->
     <button id="zoomClose" style="
         position:absolute;
-        top:20px;
-        right:20px;
+        top:60px;
+        right:50px;
         font-size:18px;
-        background:rgba(0,0,0,0.6);
+        background:rgba(255, 0, 0, 0.50);
         color:#fff;
         border:2px solid #fff;
-        width:45px;
-        height:45px;
-        border-radius:50%;
+        width:100px;
+        height:100px;
+        border-radius:20px;
+        font-size: 25px;
         cursor:pointer;
         z-index:100000;
-    ">✕</button>
+    ">X</button>
 
     <!-- BOTÃO ANTERIOR -->
     <button id="zoomPrev" style="
@@ -502,12 +491,12 @@ function openZoom(produtoId, index = 0) {
         left:20px;
         top:50%;
         transform:translateY(-50%);
-        font-size:30px;
-        background:rgba(0,0,0,0.5);
+        font-size:45px;
+        background:rgba(0, 210, 0, 0.89);
         color:#fff;
         border:none;
-        width:50px;
-        height:60px;
+        width:70px;
+        height:70px;
         border-radius:8px;
         cursor:pointer;
         z-index:100000;
@@ -518,6 +507,7 @@ function openZoom(produtoId, index = 0) {
          style="
          max-width:90%;
          max-height:90%;
+         border-radius: 25px;
          object-fit:contain;
          z-index:1;
     ">
@@ -528,12 +518,12 @@ function openZoom(produtoId, index = 0) {
         right:20px;
         top:50%;
         transform:translateY(-50%);
-        font-size:30px;
-        background:rgba(0,0,0,0.5);
+        font-size:45px;
+        background:rgba(0, 210, 0, 0.89);
         color:#fff;
         border:none;
-        width:50px;
-        height:60px;
+        width:70px;
+        height:70px;
         border-radius:8px;
         cursor:pointer;
         z-index:100000;
