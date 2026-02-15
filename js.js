@@ -65,7 +65,10 @@ function showLoading(texto = "Carregando...") {
         style.innerHTML = `
         #globalLoader{
         position:fixed;
-        inset:0;
+        top: 19rem;
+        left: 0;
+        right: 0;
+        bottom: 0;
         background:rgba(255,255,255,0.7);
         backdrop-filter: blur(3px);
         display:flex;
