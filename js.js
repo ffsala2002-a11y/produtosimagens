@@ -511,7 +511,7 @@ function openZoom(produtoId, index = 0) {
         height:70px;
         border-radius:8px;
         cursor:pointer;
-        z-index:100000;
+        z-index:2;
     ">◀</button>
 
     <!-- IMAGEM -->
@@ -538,7 +538,7 @@ function openZoom(produtoId, index = 0) {
         height:70px;
         border-radius:8px;
         cursor:pointer;
-        z-index:100000;
+        z-index:2;
     ">▶</button>
     `;
 
