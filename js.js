@@ -391,11 +391,14 @@ async function uploadImagemProduto(produtoId, input) {
     if (!files || !files.length) return;
 
     // 🔎 Busca o NCE do produto
-    const { data: produto, error: produtoError } = await supabase
-        .from("produtos")
-        .select("nce")
-        .eq("id", produtoId)
-        .single();
+    const {
+        data: produto,
+        error: produtoError
+    } = await supabase
+    .from("produtos")
+    .select("nce")
+    .eq("id", produtoId)
+    .single();
 
     if (produtoError || !produto) {
         console.error(produtoError);
@@ -407,10 +410,12 @@ async function uploadImagemProduto(produtoId, input) {
 
         const nomeArquivo = produtoId + "_" + Date.now() + "_" + file.name;
 
-        const { error: uploadError } = await supabase
-            .storage
-            .from("produtos")
-            .upload(nomeArquivo, file);
+        const {
+            error: uploadError
+        } = await supabase
+        .storage
+        .from("produtos")
+        .upload(nomeArquivo, file);
 
         if (uploadError) {
             console.error(uploadError);
@@ -418,20 +423,24 @@ async function uploadImagemProduto(produtoId, input) {
             return;
         }
 
-        const { data } = supabase
-            .storage
-            .from("produtos")
-            .getPublicUrl(nomeArquivo);
+        const {
+            data
+        } = supabase
+        .storage
+        .from("produtos")
+        .getPublicUrl(nomeArquivo);
 
         const url = data.publicUrl;
 
-        const { error: insertError } = await supabase
-            .from("produto_imagens")
-            .insert({
-                produto_id: produtoId,
-                nce: produto.nce,
-                url
-            });
+        const {
+            error: insertError
+        } = await supabase
+        .from("produto_imagens")
+        .insert({
+            produto_id: produtoId,
+            nce: produto.nce,
+            url
+        });
 
         if (insertError) {
             console.error(insertError);
@@ -445,9 +454,8 @@ async function uploadImagemProduto(produtoId, input) {
     cacheProdutos = null;
     await renderAdminGrid();
 }
-        
 
-    
+
 
 
 // =============================
@@ -795,19 +803,29 @@ async function renderCatalogGrid() {
 // =============================
 async function limparProdutosBanco() {
     mostrarConfirmacao("Tem certeza que deseja apagar TODOS os produtos?", async (res) => {
-        if (!res) return; // usuário cancelou
+        if (!res) return;
+
+        showLoading("Apagando produtos...");
 
         const {
             error
-        } = await supabase.from("produtos").delete().not("id", "is", null);
+        } = await supabase
+        .from("produtos")
+        .delete()
+        .not("id", "is", null);
+
         if (error) {
             console.error(error);
             mostrarModal("Erro ao limpar produtos", "#e53935");
+            hideLoading();
             return;
         }
 
         mostrarModal("Produtos removidos com sucesso!", "#4caf50");
-        renderAdminGrid();
+
+        setTimeout(() => {
+            window.location.reload(); // 🔥 RECARREGA A PÁGINA
+        }, 800);
     });
 }
 
@@ -842,7 +860,7 @@ async function religarImagensPorNCE() {
             }).eq("id", img.id);
         }
     }
-} 
+}
 
 // =============================
 // START
