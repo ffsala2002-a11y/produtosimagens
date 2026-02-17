@@ -385,20 +385,20 @@ async function atualizarBase() {
 // =============================
 // UPLOAD IMAGEM
 // =============================
-
 async function uploadImagemProduto(produtoId, input) {
 
     const files = input.files;
     if (!files || !files.length) return;
 
-    // 🔥 BUSCA O NCE DO PRODUTO CORRETO
-    const { data: produto, error: prodError } = await supabase
+    // 🔎 Busca o NCE do produto
+    const { data: produto, error: produtoError } = await supabase
         .from("produtos")
         .select("nce")
         .eq("id", produtoId)
         .single();
 
-    if (prodError || !produto) {
+    if (produtoError || !produto) {
+        console.error(produtoError);
         mostrarModal("Produto não encontrado!", "#e53935");
         return;
     }
@@ -418,11 +418,12 @@ async function uploadImagemProduto(produtoId, input) {
             return;
         }
 
-        const publicUrlData = supabase.storage
+        const { data } = supabase
+            .storage
             .from("produtos")
             .getPublicUrl(nomeArquivo);
 
-        const url = publicUrlData?.data?.publicUrl;
+        const url = data.publicUrl;
 
         const { error: insertError } = await supabase
             .from("produto_imagens")
