@@ -390,6 +390,65 @@ async function uploadImagemProduto(produtoId, input) {
     const files = input.files;
     if (!files || !files.length) return;
 
+    // 🔎 busca o produto uma vez
+    const { data: produto, error: erroProduto } = await supabase
+        .from("produtos")
+        .select("nce")
+        .eq("id", produtoId)
+        .single();
+
+    if (erroProduto || !produto) {
+        console.error(erroProduto);
+        mostrarModal("Produto não encontrado!", "#e53935");
+        return;
+    }
+
+    for (const file of files) {
+
+        const nomeArquivo = produtoId + "_" + Date.now() + "_" + file.name;
+
+        // 📦 upload no storage
+        const { error: uploadError } = await supabase
+            .storage
+            .from("produtos")
+            .upload(nomeArquivo, file);
+
+        if (uploadError) {
+            console.error(uploadError);
+            mostrarModal("Erro upload: " + uploadError.message, "#e53935");
+            return;
+        }
+
+        // 🔗 pega URL pública
+        const { data } = supabase
+            .storage
+            .from("produtos")
+            .getPublicUrl(nomeArquivo);
+
+        const url = data.publicUrl;
+
+        // 💾 salva no banco
+        const { error: insertError } = await supabase
+            .from("produto_imagens")
+            .insert({
+                produto_id: produtoId,
+                nce: produto.nce,
+                url
+            });
+
+        if (insertError) {
+            console.error(insertError);
+            mostrarModal("Erro ao salvar imagem", "#e53935");
+            return;
+        }
+    }
+
+    mostrarModal("Imagem enviada!", "#4caf50");
+
+    cacheProdutos = null;
+    await renderAdminGrid();
+}
+
     // =============================
     // GARANTE QUE PRODUTO EXISTE + PEGA NCE (1 query só)
     // =============================
