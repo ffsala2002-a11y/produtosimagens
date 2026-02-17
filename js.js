@@ -381,76 +381,95 @@ async function atualizarBase() {
         "#4caf50");
 }
 
-
 // =============================
 // UPLOAD IMAGEM
 // =============================
 async function uploadImagemProduto(produtoId, input) {
-
     const files = input.files;
     if (!files || !files.length) return;
 
-    // 🔎 Busca o NCE do produto
-    const {
-        data: produto,
-        error: produtoError
-    } = await supabase
-    .from("produtos")
-    .select("nce")
-    .eq("id", produtoId)
-    .single();
-
-    if (produtoError || !produto) {
-        console.error(produtoError);
-        mostrarModal("Produto não encontrado!", "#e53935");
+    if (!produtoId) {
+        mostrarModal("Produto inválido!", "#e53935");
         return;
     }
 
-    for (const file of files) {
+    showLoading("Enviando imagem(s)...");
 
-        const nomeArquivo = produtoId + "_" + Date.now() + "_" + file.name;
+    try {
+        // 🔎 Busca NCE do produto
+        const { data: produto, error: produtoError } = await supabase
+            .from("produtos")
+            .select("id,nce")
+            .eq("id", produtoId)
+            .single();
 
-        const {
-            error: uploadError
-        } = await supabase
-        .storage
-        .from("produtos")
-        .upload(nomeArquivo, file);
-
-        if (uploadError) {
-            console.error(uploadError);
-            mostrarModal("Erro upload: " + uploadError.message, "#e53935");
+        if (produtoError || !produto) {
+            console.error(produtoError);
+            hideLoading();
+            mostrarModal("Produto não encontrado!", "#e53935");
             return;
         }
 
-        const {
-            data
-        } = supabase
-        .storage
-        .from("produtos")
-        .getPublicUrl(nomeArquivo);
+        for (const file of files) {
 
-        const url = data.publicUrl;
+            const nomeArquivo = `${produtoId}_${Date.now()}_${file.name}`;
 
-        const {
-            error: insertError
-        } = await supabase
-        .from("produto_imagens")
-        .insert({
-            produto_id: produtoId,
-            nce: produto.nce,
-            url
-        });
+            // 🔼 Upload
+            const { error: uploadError } = await supabase
+                .storage
+                .from("produtos")
+                .upload(nomeArquivo, file);
 
-        if (insertError) {
-            console.error(insertError);
-            mostrarModal("Erro ao salvar imagem", "#e53935");
-            return;
+            if (uploadError) {
+                console.error(uploadError);
+                continue; // continua para próxima imagem
+            }
+
+            // 🔗 URL pública
+            const { data } = supabase
+                .storage
+                .from("produtos")
+                .getPublicUrl(nomeArquivo);
+
+            const url = data?.publicUrl;
+
+            if (!url) {
+                console.error("URL inválida");
+                continue;
+            }
+
+            // 🚫 DUPLICIDADE (opcional mas recomendado)
+            const { data: jaExiste } = await supabase
+                .from("produto_imagens")
+                .select("id")
+                .eq("url", url)
+                .maybeSingle();
+
+            if (jaExiste) continue;
+
+            // 💾 INSERT SEGURO
+            const { error: insertError } = await supabase
+                .from("produto_imagens")
+                .insert({
+                    produto_id: produto.id,   // 🔥 FORÇA ID CORRETO
+                    nce: produto.nce,
+                    url: url
+                });
+
+            if (insertError) {
+                console.error(insertError);
+                continue;
+            }
         }
+
+        mostrarModal("Imagem(s) enviada(s)!", "#4caf50");
+
+    } catch (err) {
+        console.error(err);
+        mostrarModal("Erro inesperado no upload", "#e53935");
     }
 
-    mostrarModal("Imagem enviada!", "#4caf50");
-
+    hideLoading();
     cacheProdutos = null;
     await renderAdminGrid();
 }
@@ -834,32 +853,51 @@ async function limparProdutosBanco() {
 // RELIGAR IMAGENS PELO NCE
 // =============================
 async function religarImagensPorNCE() {
-    const {
-        data: produtos
-    } = await supabase.from("produtos").select("id,nce");
-    const {
-        data: imagens
-    } = await supabase.from("produto_imagens").select("id,nce");
-    if (!produtos||!imagens) return;
+    showLoading("Religando imagens...");
 
+    const { data: produtos } = await supabase
+        .from("produtos")
+        .select("id,nce");
+
+    const { data: imagens } = await supabase
+        .from("produto_imagens")
+        .select("id,nce,produto_id");
+
+    if (!produtos || !imagens) {
+        hideLoading();
+        return;
+    }
+
+    // 🔎 Mapa NCE → produtoId
     const mapa = {};
     for (const p of produtos) {
         const chave = normalizarNCE(p.nce);
         if (!chave) continue;
-        if (!mapa[chave]) mapa[chave] = [];
-        mapa[chave].push(p.id);
+        mapa[chave] = p.id; // um NCE = um produto
     }
 
     for (const img of imagens) {
+
+        // só corrige se estiver null
+        if (img.produto_id) continue;
+
         const chave = normalizarNCE(img.nce);
         if (!chave) continue;
-        const listaIds = mapa[chave]; if (!listaIds) continue;
-        for (const novoId of listaIds) {
-            await supabase.from("produto_imagens").update({
-                produto_id: novoId
-            }).eq("id", img.id);
-        }
+
+        const novoId = mapa[chave];
+        if (!novoId) continue;
+
+        await supabase
+            .from("produto_imagens")
+            .update({ produto_id: novoId })
+            .eq("id", img.id);
     }
+
+    hideLoading();
+    mostrarModal("Religação finalizada!", "#4caf50");
+
+    cacheProdutos = null;
+    await renderAdminGrid();
 }
 
 // =============================
