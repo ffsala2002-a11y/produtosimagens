@@ -385,20 +385,20 @@ async function atualizarBase() {
 // =============================
 // UPLOAD IMAGEM
 // =============================
+
 async function uploadImagemProduto(produtoId, input) {
 
     const files = input.files;
     if (!files || !files.length) return;
 
-    // 🔎 busca o produto uma vez
-    const { data: produto, error: erroProduto } = await supabase
+    // 🔥 BUSCA O NCE DO PRODUTO CORRETO
+    const { data: produto, error: prodError } = await supabase
         .from("produtos")
         .select("nce")
         .eq("id", produtoId)
         .single();
 
-    if (erroProduto || !produto) {
-        console.error(erroProduto);
+    if (prodError || !produto) {
         mostrarModal("Produto não encontrado!", "#e53935");
         return;
     }
@@ -407,7 +407,6 @@ async function uploadImagemProduto(produtoId, input) {
 
         const nomeArquivo = produtoId + "_" + Date.now() + "_" + file.name;
 
-        // 📦 upload no storage
         const { error: uploadError } = await supabase
             .storage
             .from("produtos")
@@ -419,15 +418,12 @@ async function uploadImagemProduto(produtoId, input) {
             return;
         }
 
-        // 🔗 pega URL pública
-        const { data } = supabase
-            .storage
+        const publicUrlData = supabase.storage
             .from("produtos")
             .getPublicUrl(nomeArquivo);
 
-        const url = data.publicUrl;
+        const url = publicUrlData?.data?.publicUrl;
 
-        // 💾 salva no banco
         const { error: insertError } = await supabase
             .from("produto_imagens")
             .insert({
@@ -448,6 +444,7 @@ async function uploadImagemProduto(produtoId, input) {
     cacheProdutos = null;
     await renderAdminGrid();
 }
+        
 
     // =============================
     // GARANTE QUE PRODUTO EXISTE + PEGA NCE (1 query só)
