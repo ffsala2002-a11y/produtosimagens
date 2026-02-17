@@ -697,7 +697,7 @@ function setupAdmin() {
             const timeout = setTimeout(() => {
                 hideLoading();
                 mostrarModal("Processo demorou demais e foi finalizado.", "#e53935");
-            }, 10000); //segundos
+            }, 1000); //segundos
 
             try {
                 const novos = parseTxt(reader.result);
