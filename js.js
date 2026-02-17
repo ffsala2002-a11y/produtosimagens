@@ -393,17 +393,6 @@ async function uploadImagemProduto(produtoId, input) {
     // =============================
     // GARANTE QUE PRODUTO EXISTE + PEGA NCE (1 query só)
     // =============================
-    const { data: produto, error } = await supabase
-        .from("produtos")
-        .select("id,nce")
-        .eq("id", produtoId)
-        .single();
-
-    if (error || !produto) {
-        mostrarModal("Produto não existe mais!", "#e53935");
-        return;
-    }
-
     for (const file of files) {
         const nomeArquivo = produtoId + "_" + Date.now() + "_" + file.name;
 
