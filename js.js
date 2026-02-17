@@ -11,6 +11,12 @@ if (!window.supabaseClient) {
 var supabase = window.supabaseClient;
 
 // =============================
+// CACHE GLOBAL (PERFORMANCE)
+// =============================
+let cacheProdutos = null;
+
+
+// =============================
 // MODAL NOTIFICAÇÃO
 // =============================
 function mostrarModal(texto, cor = "#2196f3") {
@@ -65,7 +71,7 @@ function showLoading(texto = "Carregando...") {
         style.innerHTML = `
         #globalLoader{
         position:fixed;
-        top: 19rem;
+        top: 14rem;
         left: 0;
         right: 0;
         bottom: 0;
@@ -82,7 +88,7 @@ function showLoading(texto = "Carregando...") {
         width:45px;
         height:45px;
         border:5px solid #ddd;
-        border-top:5px solid #57AD00;
+        border-top:5px solid #2196f3;
         border-radius:50%;
         animation:spin .8s linear infinite;
         margin:0 auto 10px;
@@ -226,44 +232,52 @@ function dinheiroBR(v) {
 }
 
 // =============================
-// BUSCAR PRODUTOS + IMAGENS (ORDENADO ALFABÉTICO)
+// BUSCAR PRODUTOS OTIMIZADO (COM CACHE)
 // =============================
-async function getProdutosBanco() {
-    let todos = [];
-    let inicio = 0;
-    const tamanho = 1000;
+async function getProdutosBanco(force = false) {
 
-    while (true) {
-        const {
-            data,
-            error
-        } = await supabase.from("produtos")
-        .select("*")
-        .range(inicio, inicio + tamanho - 1)
-        .order("descricao", {
-            ascending: true
-        });
+    // usa cache se existir
+    if (cacheProdutos && !force) return cacheProdutos;
 
-        if (error) {
-            console.log(error); break;
-        }
-        if (!data || data.length === 0) break;
+    const {
+        data: produtos,
+        error
+    } = await supabase
+    .from("produtos")
+    .select("*")
+    .order("descricao", {
+        ascending: true
+    });
 
-        todos = [...todos,
-            ...data];
-        inicio += tamanho;
+    if (error) {
+        console.log(error);
+        return [];
     }
 
     const {
         data: imagens
-    } = await supabase.from("produto_imagens").select("produto_id, nce, url, id");
+    } = await supabase
+    .from("produto_imagens")
+    .select("produto_id,nce,url,id");
 
-    for (const p of todos) {
-        const chave = normalizarNCE(p.nce);
-        p.produto_imagens = (imagens || []).filter(img => img.produto_id === p.id || normalizarNCE(img.nce) === chave);
+    // MAPA DE IMAGENS (muito mais rápido que filter)
+    const mapa = {};
+
+    for (const img of imagens || []) {
+        const chave = img.produto_id || normalizarNCE(img.nce);
+
+        if (!mapa[chave]) mapa[chave] = [];
+        mapa[chave].push(img);
     }
 
-    return todos;
+    for (const p of produtos) {
+        const chave = normalizarNCE(p.nce);
+        p.produto_imagens = mapa[p.id] || mapa[chave] || [];
+    }
+
+    cacheProdutos = produtos;
+
+    return produtos;
 }
 
 
@@ -358,11 +372,15 @@ function parseTxt(text) {
 // ATUALIZAR BASE
 // =============================
 async function atualizarBase() {
+    cacheProdutos = null; // limpa cache
+
     document.getElementById("duplicadosView").innerHTML = "";
     await renderAdminGrid();
+
     mostrarModal("Base atualizada!",
         "#4caf50");
 }
+
 
 // =============================
 // UPLOAD IMAGEM
@@ -439,20 +457,22 @@ function renderCarousel(imagens, produtoId) {
 
     if (!imagens || !imagens.length) return `
     <div class="carousel" style="width:100%;height:180px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;margin-bottom:10px;">
-        Sem imagem
+    Sem imagem
     </div>
     `;
 
     return `
     <div class="carousel" style="display:flex;align-items:center;justify-content:center;">
-        <button onclick="prevImg('${produtoId}')">◀</button>
+    <button onclick="prevImg('${produtoId}')">◀</button>
 
-        <img id="img-${produtoId}" 
-             src="${imagens[0].url}" 
-             onclick="openZoom('${produtoId}', carouselIndex['${produtoId}'] || 0)"
-             style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
+    <img loading="lazy"
+    id="img-${produtoId}"
+    src="${imagens[0].url}"
 
-        <button onclick="nextImg('${produtoId}')">▶</button>
+    onclick="openZoom('${produtoId}', carouselIndex['${produtoId}'] || 0)"
+    style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
+
+    <button onclick="nextImg('${produtoId}')">▶</button>
     </div>
     `;
 }
@@ -486,7 +506,7 @@ function openZoom(produtoId, index = 0) {
         top:60px;
         right:50px;
         font-size:18px;
-        background:rgba(255, 255, 255, 0.8);
+        background:rgba(143, 143, 143, 0.55);
         color:#fff;
         border:2px solid #fff;
         width:100px;
@@ -499,46 +519,52 @@ function openZoom(produtoId, index = 0) {
 
     <!-- BOTÃO ANTERIOR -->
     <button id="zoomPrev" style="
+        display:flex;
+        align-items:center;
+        justify-content:center;
         position:absolute;
         left:20px;
         top:50%;
         transform:translateY(-50%);
         font-size:45px;
-        background:rgba(214, 207, 207, 0.97;
+        background:rgba(143, 143, 143, 0.97);
         color:rgb(0, 0, 0);
         border:none;
         width:70px;
         height:70px;
         border-radius:8px;
         cursor:pointer;
-        z-index:2;
+        z-index:100000;
     ">◀</button>
 
     <!-- IMAGEM -->
     <img id="zoomImg" src="${imagens[atual].url}" 
          style="
-         max-width:90%;
-         max-height:90%;
+         max-width:60%;
+         max-height:60%;
          border-radius: 25px;
          object-fit:contain;
-         z-index:1;
+         z-index: -1;
     ">
 
     <!-- BOTÃO PRÓXIMO -->
     <button id="zoomNext" style="
+        display:flex;
+        align-items:center;
+        justify-cintent:center;
         position:absolute;
         right:20px;
         top:50%;
         transform:translateY(-50%);
         font-size:45px;
-        background:rgba(214, 207, 207, 0.97;
+        background:rgba(143, 143, 143, 0.97);
         color:rgb(0, 0, 0);
         border:none;
         width:70px;
         height:70px;
         border-radius:8px;
         cursor:pointer;
-        z-index:2;
+        z-index:100000;
     ">▶</button>
     `;
 
@@ -558,6 +584,20 @@ function openZoom(produtoId, index = 0) {
     };
 }
 
+
+// =============================
+// DEBOUNCE (EVITA TRAVAMENTOS)
+// =============================
+function debounce(fn, delay = 300) {
+    let timer;
+
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), delay);
+    };
+}
+
+
 // =============================
 // VIEWS
 // =============================
@@ -575,9 +615,14 @@ function renderLogin() {
 function renderHome() {
     return `
     <div class="container">
-    <h2>Imagens de Produtos</h2>
+    <h2>Catálago AUG</h2>
     <div id="totalCatalogo"></div>
-    <input class="input" placeholder="Buscar" id="filtro">
+    <div class="box-input" style="padding: 1rem 0;">
+    <input class="input" placeholder="Buscar por NCE ou DESCRIÇÃO" id="filtro" style="
+    width: 300px;
+    
+    ">
+    </div id="box-catalago">
     <div class="grid" id="catalogGrid"></div>
     </div>
     `;
@@ -586,15 +631,19 @@ function renderHome() {
 function renderAdmin() {
     return `
     <div class="container">
-    <button onclick="logoutAdmin()">Sair</button>
-    <button onclick="atualizarBase()" style="background:#2196f3">Atualizar Base</button>
-    <h2>Admin Produtos</h2>
+    <div id="box-config">
+    <button onclick="logoutAdmin()" style="font-weight:bold;">Sair</button>
+    <button onclick="atualizarBase()" style="background:#2196f3;font-weight:bold;color:#ffff;">Atualizar Base</button>
+    <h2>Admin produtos</h2>
     <div id="totalAdmin"></div>
     <input type="file" id="txtUpload">
-    <input class="input" placeholder="Filtrar" id="filtro">
+    <input class="input" placeholder="Buscar por NCE ou DESCRIÇÃO" id="filtro" style="width:300px;">
     <div id="importInfo"></div>
     <div id="duplicadosView"></div>
-    <button onclick="limparProdutosBanco()" style="background:#e53935">Limpar Produtos</button>
+    <div style="padding:1rem 0;">
+    <button onclick="limparProdutosBanco()" style="background:#e53935; color:#ffff; font-weight:bold;">Limpar Produtos</button>
+    </div>
+    </div>
     <div class="grid" id="adminGrid"></div>
     </div>
     `;
@@ -630,7 +679,7 @@ function setupAdmin() {
             const timeout = setTimeout(() => {
                 hideLoading();
                 mostrarModal("Processo demorou demais e foi finalizado.", "#e53935");
-            }, 1000); //segundos
+            }, 10000); //segundos
 
             try {
                 const novos = parseTxt(reader.result);
@@ -638,6 +687,8 @@ function setupAdmin() {
                 await salvarProdutosBanco(novos);
                 await religarImagensPorNCE();
                 await atualizarBase();
+                cacheProdutos = null;
+
 
                 document.getElementById("importInfo").innerHTML =
                 `Importação concluída<br>Total lidos: ${novos.length}`;
@@ -653,7 +704,7 @@ function setupAdmin() {
         reader.readAsText(file);
     };
 
-    filtro.oninput = renderAdminGrid;
+    filtro.oninput = debounce(renderAdminGrid, 300);
     renderAdminGrid();
 }
 
@@ -664,7 +715,7 @@ async function renderAdminGrid() {
     let produtos = await getProdutosBanco();
     if (filtro) produtos = produtos.filter(p => (p.descricao+" "+p.nce).toLowerCase().includes(filtro));
 
-    document.getElementById("totalAdmin").innerHTML = `Total: ${produtos.length}`;
+    document.getElementById("totalAdmin").innerHTML = `Total produtos: ${produtos.length}`;
 
     document.getElementById("adminGrid").innerHTML = produtos.map(p => `
         <div class="card">
@@ -674,7 +725,7 @@ async function renderAdminGrid() {
         <div style="margin-top:10px;">
         ${(p.produto_imagens || []).map(img => `
             <div style="display:inline-block;margin:5px;text-align:center;">
-            <img src="${img.url}" style="width:70px;height:70px;object-fit:cover;display:block;">
+            <img loading="lazy" src="${img.url}" style="width:70px;height:70px;object-fit:cover;display:block;">
             <button style="background:#e53935;font-size:10px;padding:4px;" onclick="deletarImagem('${img.id}','${p.id}')">Excluir</button>
             </div>
             `).join("")}
@@ -690,9 +741,10 @@ async function renderAdminGrid() {
 // CATALOGO
 // =============================
 function setupCatalogo() {
-    document.getElementById("filtro").oninput = renderCatalogGrid;
+    document.getElementById("filtro").oninput = debounce(renderCatalogGrid, 300);
     renderCatalogGrid();
 }
+
 
 async function renderCatalogGrid() {
     showLoading("Carregando catálogo...");
@@ -701,7 +753,7 @@ async function renderCatalogGrid() {
     let produtos = await getProdutosBanco();
     if (filtro) produtos = produtos.filter(p => (p.descricao+" "+p.nce).toLowerCase().includes(filtro));
 
-    document.getElementById("totalCatalogo").innerHTML = `Total: ${produtos.length}`;
+    document.getElementById("totalCatalogo").innerHTML = `Total produtos: ${produtos.length}`;
 
     document.getElementById("catalogGrid").innerHTML = produtos.map(p => {
         const imagens = p.produto_imagens || [];
@@ -769,4 +821,4 @@ async function religarImagensPorNCE() {
 // =============================
 // START
 // =============================
-setPage("home"); 
+setPage("home");
