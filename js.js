@@ -417,7 +417,10 @@ async function uploadImagemProduto(produtoId, input) {
     }
 
     mostrarModal("Imagem enviada!", "#4caf50");
-    renderAdminGrid();
+
+    cacheProdutos = null; // limpa cache
+    await renderAdminGrid(); // atualiza tela
+
 }
 
 // =============================
@@ -427,8 +430,12 @@ async function deletarImagem(id, produtoId) {
     if (!confirm("Excluir imagem?")) return;
 
     await supabase.from("produto_imagens").delete().eq("id", id);
+
     mostrarModal("Imagem removida!", "#e53935");
-    renderAdminGrid();
+
+    cacheProdutos = null;
+    await renderAdminGrid();
+
 }
 
 // =============================
@@ -502,69 +509,69 @@ function openZoom(produtoId, index = 0) {
     modal.innerHTML = `
     <!-- BOTÃO FECHAR -->
     <button id="zoomClose" style="
-        position:absolute;
-        top:60px;
-        right:50px;
-        font-size:18px;
-        background:rgba(143, 143, 143, 0.55);
-        color:#fff;
-        border:2px solid #fff;
-        width:100px;
-        height:100px;
-        border-radius:20px;
-        font-size: 25px;
-        cursor:pointer;
-        z-index:100000;
+    position:absolute;
+    top:60px;
+    right:50px;
+    font-size:18px;
+    background:rgba(143, 143, 143, 0.55);
+    color:#fff;
+    border:2px solid #fff;
+    width:100px;
+    height:100px;
+    border-radius:20px;
+    font-size: 25px;
+    cursor:pointer;
+    z-index:100000;
     ">X</button>
 
     <!-- BOTÃO ANTERIOR -->
     <button id="zoomPrev" style="
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        position:absolute;
-        left:20px;
-        top:50%;
-        transform:translateY(-50%);
-        font-size:45px;
-        background:rgba(143, 143, 143, 0.97);
-        color:rgb(0, 0, 0);
-        border:none;
-        width:70px;
-        height:70px;
-        border-radius:8px;
-        cursor:pointer;
-        z-index:100000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:absolute;
+    left:20px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:45px;
+    background:rgba(143, 143, 143, 0.97);
+    color:rgb(0, 0, 0);
+    border:none;
+    width:70px;
+    height:70px;
+    border-radius:8px;
+    cursor:pointer;
+    z-index:100000;
     ">◀</button>
 
     <!-- IMAGEM -->
-    <img id="zoomImg" src="${imagens[atual].url}" 
-         style="
-         max-width:60%;
-         max-height:60%;
-         border-radius: 25px;
-         object-fit:contain;
-         z-index: -1;
+    <img id="zoomImg" src="${imagens[atual].url}"
+    style="
+    max-width:60%;
+    max-height:60%;
+    border-radius: 25px;
+    object-fit:contain;
+    z-index: -1;
     ">
 
     <!-- BOTÃO PRÓXIMO -->
     <button id="zoomNext" style="
-        display:flex;
-        align-items:center;
-        justify-cintent:center;
-        position:absolute;
-        right:20px;
-        top:50%;
-        transform:translateY(-50%);
-        font-size:45px;
-        background:rgba(143, 143, 143, 0.97);
-        color:rgb(0, 0, 0);
-        border:none;
-        width:70px;
-        height:70px;
-        border-radius:8px;
-        cursor:pointer;
-        z-index:100000;
+    display:flex;
+    align-items:center;
+    justify-cintent:center;
+    position:absolute;
+    right:20px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:45px;
+    background:rgba(143, 143, 143, 0.97);
+    color:rgb(0, 0, 0);
+    border:none;
+    width:70px;
+    height:70px;
+    border-radius:8px;
+    cursor:pointer;
+    z-index:100000;
     ">▶</button>
     `;
 
@@ -597,7 +604,6 @@ function debounce(fn, delay = 300) {
     };
 }
 
-
 // =============================
 // VIEWS
 // =============================
@@ -620,7 +626,7 @@ function renderHome() {
     <div class="box-input" style="padding: 1rem 0;">
     <input class="input" placeholder="Buscar por NCE ou DESCRIÇÃO" id="filtro" style="
     width: 300px;
-    
+
     ">
     </div id="box-catalago">
     <div class="grid" id="catalogGrid"></div>
@@ -816,7 +822,7 @@ async function religarImagensPorNCE() {
             }).eq("id", img.id);
         }
     }
-}
+} 
 
 // =============================
 // START
