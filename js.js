@@ -707,33 +707,26 @@ function setupAdmin() {
         const file = e.target.files[0];
         const reader = new FileReader();
         reader.onload = async () => {
-            showLoading("Importando arquivo...");
+    showLoading("Importando arquivo...");
 
-            const timeout = setTimeout(() => {
-                hideLoading();
-                mostrarModal("Processo demorou demais e foi finalizado.", "#e53935");
-            }, 1000); //segundos
+    try {
+        const novos = parseTxt(reader.result);
 
-            try {
-                const novos = parseTxt(reader.result);
+        await salvarProdutosBanco(novos);
 
-                await salvarProdutosBanco(novos);
-                await religarImagensPorNCE();
-                await atualizarBase();
-                cacheProdutos = null;
+        cacheProdutos = null;
 
+        mostrarModal("Importação concluída!", "#4caf50");
 
-                document.getElementById("importInfo").innerHTML =
-                `Importação concluída<br>Total lidos: ${novos.length}`;
+        setTimeout(() => {
+            window.location.reload(); // 🔥 atualização real
+        }, 300);
 
-            } catch (e) {
-                console.error(e);
-                mostrarModal("Erro durante importação.", "#e53935");
-            } finally {
-                clearTimeout(timeout);
-                hideLoading();
-            }
-        };
+    } catch (e) {
+        console.error(e);
+        mostrarModal("Erro durante importação.", "#e53935");
+    }
+};
         reader.readAsText(file);
     };
 
