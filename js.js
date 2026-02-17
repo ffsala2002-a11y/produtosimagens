@@ -447,49 +447,7 @@ async function uploadImagemProduto(produtoId, input) {
 }
         
 
-    // =============================
-    // GARANTE QUE PRODUTO EXISTE + PEGA NCE (1 query só)
-    // =============================
-    for (const file of files) {
-        const nomeArquivo = produtoId + "_" + Date.now() + "_" + file.name;
-
-        const { error: uploadError } = await supabase
-            .storage
-            .from("produtos")
-            .upload(nomeArquivo, file);
-
-        if (uploadError) {
-            console.error(uploadError);
-            mostrarModal("Erro upload: " + uploadError.message, "#e53935");
-            return;
-        }
-
-        const publicUrlData = supabase.storage
-            .from("produtos")
-            .getPublicUrl(nomeArquivo);
-
-        const url = publicUrlData?.data?.publicUrl;
-
-        const { error: insertError } = await supabase
-            .from("produto_imagens")
-            .insert({
-                produto_id: produtoId,
-                nce: produto.nce,
-                url
-            });
-
-        if (insertError) {
-            console.error(insertError);
-            mostrarModal("Erro ao salvar imagem", "#e53935");
-            return;
-        }
-    }
-
-    mostrarModal("Imagem enviada!", "#4caf50");
-
-    cacheProdutos = null;
-    await renderAdminGrid();
-}
+    
 
 
 // =============================
