@@ -89,3 +89,34 @@ button{
   cursor:pointer;
 }
 
+
+#box-catalago {
+    width: 100vw;
+    height: 100vh;
+}
+
+#catalogGrid {
+    width: 100%;
+    height: 84%;
+    padding: 0.5rem;
+    overflow: auto;
+    border: solid 2px;
+    border-radius: 10px;
+    background-color: rgba(122, 122, 122, 0.86);
+}
+
+#box-admin {
+    width: 100vw;
+    height: auto;
+}
+
+#adminGrid {
+    width: 100%;
+    height: 84%;
+    padding: 0.5rem;
+    overflow: auto;
+    border: solid 2px;
+    border-radius: 10px;
+    background-color: rgba(122, 122, 122, 0.86);
+}
+
