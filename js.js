@@ -606,7 +606,7 @@ function openZoom(produtoId, index = 0) {
     max-height:60%;
     border-radius:25px;
     object-fit:contain;
-    z-index:-1;
+    z-index:1;
     ">
 
     <button id="zoomNext" style="
