@@ -512,28 +512,28 @@ function prevImg(produtoId) {
 // =============================
 // RENDER CARROSSEL
 // =============================
-function renderCarousel(imagens, produtoId) {
+function renderCarousel(imagens, produto) {
+
     if (!window.carouselData) window.carouselData = {};
-    window.carouselData[produtoId] = imagens || [];
+    window.carouselData[produto.id] = {
+        imagens: imagens || [],
+        produto: produto
+    };
 
     if (!imagens || !imagens.length) return `
     <div class="carousel" style="width:100%;height:180px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;margin-bottom:10px;">
-    Sem imagem
+        Sem imagem
     </div>
     `;
 
     return `
     <div class="carousel" style="display:flex;align-items:center;justify-content:center;">
-    <button onclick="prevImg('${produtoId}')">◀</button>
-
-    <img loading="lazy"
-    id="img-${produtoId}"
-    src="${imagens[0].url}"
-
-    onclick="openZoom('${produtoId}', carouselIndex['${produtoId}'] || 0)"
-    style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
-
-    <button onclick="nextImg('${produtoId}')">▶</button>
+        <button onclick="prevImg('${produto.id}')">◀</button>
+        <img id="img-${produto.id}" 
+             src="${imagens[0].url}" 
+             onclick="openZoom('${produto.id}')" 
+             style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
+        <button onclick="nextImg('${produto.id}')">▶</button>
     </div>
     `;
 }
@@ -544,8 +544,12 @@ function renderCarousel(imagens, produtoId) {
 // + BOTÃO WHATSAPP
 // =============================
 function openZoom(produtoId, index = 0) {
-    const imagens = (window.carouselData || {})[produtoId];
-    if (!imagens || !imagens.length) return;
+
+    const data = (window.carouselData || {})[produtoId];
+    if (!data || !data.imagens.length) return;
+
+    const imagens = data.imagens;
+    const produto = data.produto;
 
     let atual = index;
 
@@ -562,7 +566,6 @@ function openZoom(produtoId, index = 0) {
     `;
 
     modal.innerHTML = `
-    <!-- BOTÃO FECHAR -->
     <button id="zoomClose" style="
     position:absolute;
     top:60px;
@@ -578,7 +581,6 @@ function openZoom(produtoId, index = 0) {
     z-index:100000;
     ">X</button>
 
-    <!-- BOTÃO ANTERIOR -->
     <button id="zoomPrev" style="
     display:flex;
     align-items:center;
@@ -589,7 +591,7 @@ function openZoom(produtoId, index = 0) {
     transform:translateY(-50%);
     font-size:45px;
     background:rgba(143, 143, 143, 0.97);
-    color:rgb(0, 0, 0);
+    color:black;
     border:none;
     width:70px;
     height:70px;
@@ -598,7 +600,6 @@ function openZoom(produtoId, index = 0) {
     z-index:100000;
     ">◀</button>
 
-    <!-- IMAGEM -->
     <img id="zoomImg" src="${imagens[atual].url}"
     style="
     max-width:60%;
@@ -608,7 +609,6 @@ function openZoom(produtoId, index = 0) {
     z-index:-1;
     ">
 
-    <!-- BOTÃO PRÓXIMO -->
     <button id="zoomNext" style="
     display:flex;
     align-items:center;
@@ -619,7 +619,7 @@ function openZoom(produtoId, index = 0) {
     transform:translateY(-50%);
     font-size:45px;
     background:rgba(143, 143, 143, 0.97);
-    color:rgb(0, 0, 0);
+    color:black;
     border:none;
     width:70px;
     height:70px;
@@ -628,7 +628,7 @@ function openZoom(produtoId, index = 0) {
     z-index:100000;
     ">▶</button>
 
-    <!-- NOVO BOTÃO WHATSAPP -->
+    <!-- BOTÃO WHATSAPP -->
     <button id="zoomShare" style="
     position:absolute;
     bottom:40px;
@@ -649,7 +649,6 @@ function openZoom(produtoId, index = 0) {
 
     document.body.appendChild(modal);
 
-    // fechar apenas no X
     modal.querySelector("#zoomClose").onclick = () => modal.remove();
 
     modal.querySelector("#zoomNext").onclick = () => {
@@ -662,29 +661,20 @@ function openZoom(produtoId, index = 0) {
         modal.querySelector("#zoomImg").src = imagens[atual].url;
     };
 
-    // =============================
-    // NOVA FUNÇÃO WHATSAPP
-    // =============================
+    // WHATSAPP
     modal.querySelector("#zoomShare").onclick = () => {
 
-        // Busca o produto na lista geral
-        const produto = (window.listaProdutos || []).find(p => p.id == produtoId);
-        if (!produto) {
-            alert("Produto não encontrado");
-            return;
-        }
-
-        const listaFotos = imagens.map(img => img.url).join("\n");
+        const fotos = imagens.map(img => img.url).join("\n");
 
         const mensagem =
 `🛍️ *${produto.descricao}*
 
 💰 *Preço:* ${dinheiroBR(produto.preco)}
 
-📷 *Fotos do produto:*
-${listaFotos}
+📷 *Fotos:*
+${fotos}
 
-📲 Gostaria de mais informações!`;
+📲 Gostaria de comprar!`;
 
         const link = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
         window.open(link, "_blank");
