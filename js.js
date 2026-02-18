@@ -650,38 +650,31 @@ function openZoom(produtoId, index = 0) {
         imgEl.src = imagens[atual].url;
     };
 
-    // botão compartilhar todas
-    modal.querySelector("#zoomShare").onclick = async () => {
-        const texto = produto 
-            ? `${produto.descricao}\nPreço: ${produto.precoBR || produto.preco}`
-            : "Confira este produto!";
+    // botão compartilhar WHATSAPP
+modal.querySelector("#zoomShare").onclick = () => {
 
-        try {
-            // checa se Web Share API suporta arquivos
-            if (navigator.canShare && navigator.canShare({ files: [] })) {
-                const files = await Promise.all(imagens.map(async img => {
-                    const res = await fetch(img.url);
-                    const blob = await res.blob();
-                    return new File([blob], "produto.jpg", { type: blob.type });
-                }));
+    const produto = window.produtosMap ? window.produtosMap[produtoId] : null;
+    const imagens = window.carouselData[produtoId] || [];
 
-                await navigator.share({
-                    title: produto?.descricao || "Produto",
-                    text: texto,
-                    files
-                });
-            } else {
-                // fallback: copiar links + info
-                const allUrls = imagens.map(i => i.url).join("\n");
-                const copyText = `${texto}\n${allUrls}`;
-                navigator.clipboard.writeText(copyText);
-                alert("Links de todas as imagens copiados para o clipboard!");
-            }
-        } catch (err) {
-            console.error("Erro ao compartilhar:", err);
-            alert("Não foi possível compartilhar.");
-        }
-    };
+    if (!produto) return alert("Produto não encontrado.");
+
+    const descricao = produto.descricao;
+    const preco = produto.precoBR || produto.preco;
+
+    const linksImagens = imagens.map((img, i) => 
+        `📷 Foto ${i + 1}: ${img.url}`
+    ).join("\n");
+
+    const mensagem = 
+`*${descricao}*
+💰 Preço: ${preco}
+
+${linksImagens}`;
+
+    const url = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
+
+    window.open(url, "_blank");
+};
 }
 
 
