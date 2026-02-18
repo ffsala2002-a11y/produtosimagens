@@ -512,28 +512,28 @@ function prevImg(produtoId) {
 // =============================
 // RENDER CARROSSEL
 // =============================
-function renderCarousel(imagens, produto) {
-
+function renderCarousel(imagens, produtoId) {
     if (!window.carouselData) window.carouselData = {};
-    window.carouselData[produto.id] = {
-        imagens: imagens || [],
-        produto: produto
-    };
+    window.carouselData[produtoId] = imagens || [];
 
     if (!imagens || !imagens.length) return `
     <div class="carousel" style="width:100%;height:180px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;margin-bottom:10px;">
-        Sem imagem
+    Sem imagem
     </div>
     `;
 
     return `
     <div class="carousel" style="display:flex;align-items:center;justify-content:center;">
-        <button onclick="prevImg('${produto.id}')">◀</button>
-        <img id="img-${produto.id}" 
-             src="${imagens[0].url}" 
-             onclick="openZoom('${produto.id}')" 
-             style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
-        <button onclick="nextImg('${produto.id}')">▶</button>
+    <button onclick="prevImg('${produtoId}')">◀</button>
+
+    <img loading="lazy"
+    id="img-${produtoId}"
+    src="${imagens[0].url}"
+
+    onclick="openZoom('${produtoId}', carouselIndex['${produtoId}'] || 0)"
+    style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
+
+    <button onclick="nextImg('${produtoId}')">▶</button>
     </div>
     `;
 }
@@ -541,15 +541,10 @@ function renderCarousel(imagens, produto) {
 
 // =============================
 // ZOOM COM CARROSSEL (FIX UI)
-// + BOTÃO WHATSAPP
 // =============================
-function openZoom(produtoId, index = 0) { {
-
-    const data = (window.carouselData || {})[produtoId];
-    if (!data || !data.imagens.length) return;
-
-    const imagens = data.imagens;
-    const produto = data.produto;
+function openZoom(produtoId, index = 0) {
+    const imagens = (window.carouselData || {})[produtoId];
+    if (!imagens || !imagens.length) return;
 
     let atual = index;
 
@@ -566,21 +561,24 @@ function openZoom(produtoId, index = 0) { {
     `;
 
     modal.innerHTML = `
+    <!-- BOTÃO FECHAR -->
     <button id="zoomClose" style="
     position:absolute;
     top:60px;
     right:50px;
+    font-size:18px;
     background:rgba(143, 143, 143, 0.55);
     color:#fff;
     border:2px solid #fff;
     width:100px;
     height:100px;
     border-radius:20px;
-    font-size:25px;
+    font-size: 25px;
     cursor:pointer;
     z-index:100000;
     ">X</button>
 
+    <!-- BOTÃO ANTERIOR -->
     <button id="zoomPrev" style="
     display:flex;
     align-items:center;
@@ -591,7 +589,7 @@ function openZoom(produtoId, index = 0) { {
     transform:translateY(-50%);
     font-size:45px;
     background:rgba(143, 143, 143, 0.97);
-    color:black;
+    color:rgb(0, 0, 0);
     border:none;
     width:70px;
     height:70px;
@@ -600,15 +598,17 @@ function openZoom(produtoId, index = 0) { {
     z-index:100000;
     ">◀</button>
 
+    <!-- IMAGEM -->
     <img id="zoomImg" src="${imagens[atual].url}"
     style="
     max-width:60%;
     max-height:60%;
-    border-radius:25px;
+    border-radius: 25px;
     object-fit:contain;
-    z-index:1;
+    z-index: -1;
     ">
 
+    <!-- BOTÃO PRÓXIMO -->
     <button id="zoomNext" style="
     display:flex;
     align-items:center;
@@ -619,7 +619,7 @@ function openZoom(produtoId, index = 0) { {
     transform:translateY(-50%);
     font-size:45px;
     background:rgba(143, 143, 143, 0.97);
-    color:black;
+    color:rgb(0, 0, 0);
     border:none;
     width:70px;
     height:70px;
@@ -627,28 +627,11 @@ function openZoom(produtoId, index = 0) { {
     cursor:pointer;
     z-index:100000;
     ">▶</button>
-
-    <!-- BOTÃO WHATSAPP -->
-    <button id="zoomShare" style="
-    position:absolute;
-    bottom:40px;
-    background:#25D366;
-    color:#fff;
-    border:none;
-    padding:15px 30px;
-    border-radius:40px;
-    font-size:18px;
-    font-weight:bold;
-    cursor:pointer;
-    box-shadow:0 5px 15px rgba(0,0,0,0.5);
-    z-index:100000;
-    ">
-    🟢 Compartilhar Produto
-    </button>
     `;
 
     document.body.appendChild(modal);
 
+    // fechar apenas no X
     modal.querySelector("#zoomClose").onclick = () => modal.remove();
 
     modal.querySelector("#zoomNext").onclick = () => {
@@ -659,25 +642,6 @@ function openZoom(produtoId, index = 0) { {
     modal.querySelector("#zoomPrev").onclick = () => {
         atual = (atual - 1 + imagens.length) % imagens.length;
         modal.querySelector("#zoomImg").src = imagens[atual].url;
-    };
-
-    // WHATSAPP
-    modal.querySelector("#zoomShare").onclick = () => {
-
-        const fotos = imagens.map(img => img.url).join("\n");
-
-        const mensagem =
-`🛍️ *${produto.descricao}*
-
-💰 *Preço:* ${dinheiroBR(produto.preco)}
-
-📷 *Fotos:*
-${fotos}
-
-📲 Gostaria de comprar!`;
-
-        const link = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
-        window.open(link, "_blank");
     };
 }            
     
