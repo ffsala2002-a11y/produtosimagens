@@ -543,7 +543,7 @@ function renderCarousel(imagens, produto) {
 // ZOOM COM CARROSSEL (FIX UI)
 // + BOTÃO WHATSAPP
 // =============================
-function openZoom(produtoId, index = 0) {
+function openZoom(produtoId, index = 0) { {
 
     const data = (window.carouselData || {})[produtoId];
     if (!data || !data.imagens.length) return;
