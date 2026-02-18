@@ -540,11 +540,14 @@ function renderCarousel(imagens, produtoId) {
 
 
 // =============================
-// ZOOM COM CARROSSEL (FIX UI)
+// ZOOM COM CARROSSEL + COMPARTILHAR TODAS AS FOTOS
 // =============================
 function openZoom(produtoId, index = 0) {
     const imagens = (window.carouselData || {})[produtoId];
     if (!imagens || !imagens.length) return;
+
+    // pegar info do produto
+    const produto = window.produtosMap ? window.produtosMap[produtoId] : null;
 
     let atual = index;
 
@@ -554,6 +557,7 @@ function openZoom(produtoId, index = 0) {
     inset:0;
     background:rgba(0,0,0,0.95);
     display:flex;
+    flex-direction:column;
     align-items:center;
     justify-content:center;
     z-index:99999;
@@ -561,71 +565,72 @@ function openZoom(produtoId, index = 0) {
     `;
 
     modal.innerHTML = `
-    <!-- BOTÃO FECHAR -->
     <button id="zoomClose" style="
-    position:absolute;
-    top:60px;
-    right:50px;
-    font-size:18px;
-    background:rgba(143, 143, 143, 0.55);
-    color:#fff;
-    border:2px solid #fff;
-    width:100px;
-    height:100px;
-    border-radius:20px;
-    font-size: 25px;
-    cursor:pointer;
-    z-index:100000;
-    ">X</button>
+        position:absolute;
+        top:20px;
+        right:20px;
+        font-size:18px;
+        background:rgba(0,0,0,0.6);
+        color:#fff;
+        border:2px solid #fff;
+        width:45px;
+        height:45px;
+        border-radius:50%;
+        cursor:pointer;
+        z-index:100000;
+    ">✕</button>
 
-    <!-- BOTÃO ANTERIOR -->
     <button id="zoomPrev" style="
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    position:absolute;
-    left:20px;
-    top:50%;
-    transform:translateY(-50%);
-    font-size:45px;
-    background:rgba(143, 143, 143, 0.97);
-    color:rgb(0, 0, 0);
-    border:none;
-    width:70px;
-    height:70px;
-    border-radius:8px;
-    cursor:pointer;
-    z-index:100000;
+        position:absolute;
+        left:20px;
+        top:50%;
+        transform:translateY(-50%);
+        font-size:30px;
+        background:rgba(0,0,0,0.5);
+        color:#fff;
+        border:none;
+        width:50px;
+        height:60px;
+        border-radius:8px;
+        cursor:pointer;
+        z-index:100000;
     ">◀</button>
 
-    <!-- IMAGEM -->
-    <img id="zoomImg" src="${imagens[atual].url}"
-    style="
-    max-width:60%;
-    max-height:60%;
-    border-radius: 25px;
-    object-fit:contain;
-    z-index: -1;
+    <img id="zoomImg" src="${imagens[atual].url}" 
+         style="
+         max-width:90%;
+         max-height:90%;
+         object-fit:contain;
+         z-index:1;
+         margin-bottom:10px;
     ">
 
-    <!-- BOTÃO PRÓXIMO -->
+    <button id="zoomShare" style="
+        font-size:16px;
+        padding:8px 16px;
+        background:#2196f3;
+        color:#fff;
+        border:none;
+        border-radius:6px;
+        cursor:pointer;
+        z-index:100000;
+        margin-bottom:10px;
+    ">📤 Compartilhar todas as fotos</button>
+
     <button id="zoomNext" style="
-    display:flex;
-    align-items:center;
-    justify-cintent:center;
-    position:absolute;
-    right:20px;
-    top:50%;
-    transform:translateY(-50%);
-    font-size:45px;
-    background:rgba(143, 143, 143, 0.97);
-    color:rgb(0, 0, 0);
-    border:none;
-    width:70px;
-    height:70px;
-    border-radius:8px;
-    cursor:pointer;
-    z-index:100000;
+        position:absolute;
+        right:20px;
+        top:50%;
+        transform:translateY(-50%);
+        font-size:30px;
+        background:rgba(0,0,0,0.5);
+        color:#fff;
+        border:none;
+        width:50px;
+        height:60px;
+        border-radius:8px;
+        cursor:pointer;
+        z-index:100000;
     ">▶</button>
     `;
 
@@ -634,14 +639,48 @@ function openZoom(produtoId, index = 0) {
     // fechar apenas no X
     modal.querySelector("#zoomClose").onclick = () => modal.remove();
 
+    // navegação
+    const imgEl = modal.querySelector("#zoomImg");
     modal.querySelector("#zoomNext").onclick = () => {
         atual = (atual + 1) % imagens.length;
-        modal.querySelector("#zoomImg").src = imagens[atual].url;
+        imgEl.src = imagens[atual].url;
     };
-
     modal.querySelector("#zoomPrev").onclick = () => {
         atual = (atual - 1 + imagens.length) % imagens.length;
-        modal.querySelector("#zoomImg").src = imagens[atual].url;
+        imgEl.src = imagens[atual].url;
+    };
+
+    // botão compartilhar todas
+    modal.querySelector("#zoomShare").onclick = async () => {
+        const texto = produto 
+            ? `${produto.descricao}\nPreço: ${produto.precoBR || produto.preco}`
+            : "Confira este produto!";
+
+        try {
+            // checa se Web Share API suporta arquivos
+            if (navigator.canShare && navigator.canShare({ files: [] })) {
+                const files = await Promise.all(imagens.map(async img => {
+                    const res = await fetch(img.url);
+                    const blob = await res.blob();
+                    return new File([blob], "produto.jpg", { type: blob.type });
+                }));
+
+                await navigator.share({
+                    title: produto?.descricao || "Produto",
+                    text: texto,
+                    files
+                });
+            } else {
+                // fallback: copiar links + info
+                const allUrls = imagens.map(i => i.url).join("\n");
+                const copyText = `${texto}\n${allUrls}`;
+                navigator.clipboard.writeText(copyText);
+                alert("Links de todas as imagens copiados para o clipboard!");
+            }
+        } catch (err) {
+            console.error("Erro ao compartilhar:", err);
+            alert("Não foi possível compartilhar.");
+        }
     };
 }
 
