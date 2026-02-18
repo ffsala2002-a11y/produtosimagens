@@ -540,110 +540,146 @@ function renderCarousel(imagens, produtoId) {
 
 
 // =============================
-// ZOOM COM CARROSSEL (FIX UI)
+// ZOOM COMPLETO + WHATSAPP CARD
 // =============================
-function openZoom(produtoId, index = 0) {
-    const imagens = (window.carouselData || {})[produtoId];
+function openZoom(produto, index = 0) {
+
+    const imagens = (window.carouselData || {})[produto.id];
     if (!imagens || !imagens.length) return;
 
     let atual = index;
 
     const modal = document.createElement("div");
     modal.style = `
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.95);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:99999;
-    font-family:sans-serif;
+        position:fixed;
+        inset:0;
+        background:rgba(0,0,0,0.95);
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        z-index:99999;
+        font-family:sans-serif;
     `;
 
     modal.innerHTML = `
-    <!-- BOTÃO FECHAR -->
-    <button id="zoomClose" style="
-    position:absolute;
-    top:60px;
-    right:50px;
-    font-size:18px;
-    background:rgba(143, 143, 143, 0.55);
-    color:#fff;
-    border:2px solid #fff;
-    width:100px;
-    height:100px;
-    border-radius:20px;
-    font-size: 25px;
-    cursor:pointer;
-    z-index:100000;
-    ">X</button>
+        <!-- BOTÃO FECHAR -->
+        <button id="zoomClose" style="
+            position:absolute;
+            top:20px;
+            right:20px;
+            width:45px;
+            height:45px;
+            border-radius:50%;
+            border:2px solid #fff;
+            background:rgba(0,0,0,0.6);
+            color:#fff;
+            font-size:18px;
+            cursor:pointer;
+            z-index:100000;
+        ">✕</button>
 
-    <!-- BOTÃO ANTERIOR -->
-    <button id="zoomPrev" style="
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    position:absolute;
-    left:20px;
-    top:50%;
-    transform:translateY(-50%);
-    font-size:45px;
-    background:rgba(143, 143, 143, 0.97);
-    color:rgb(0, 0, 0);
-    border:none;
-    width:70px;
-    height:70px;
-    border-radius:8px;
-    cursor:pointer;
-    z-index:100000;
-    ">◀</button>
+        <!-- BOTÃO ANTERIOR -->
+        <button id="zoomPrev" style="
+            position:absolute;
+            left:20px;
+            top:50%;
+            transform:translateY(-50%);
+            font-size:30px;
+            background:rgba(0,0,0,0.5);
+            color:#fff;
+            border:none;
+            width:55px;
+            height:65px;
+            border-radius:10px;
+            cursor:pointer;
+            z-index:100000;
+        ">◀</button>
 
-    <!-- IMAGEM -->
-    <img id="zoomImg" src="${imagens[atual].url}"
-    style="
-    max-width:60%;
-    max-height:60%;
-    border-radius: 25px;
-    object-fit:contain;
-    z-index: -1;
-    ">
+        <!-- IMAGEM -->
+        <img id="zoomImg" src="${imagens[atual].url}" 
+             style="
+                max-width:90%;
+                max-height:70%;
+                object-fit:contain;
+                margin-bottom:20px;
+                border-radius:10px;
+             ">
 
-    <!-- BOTÃO PRÓXIMO -->
-    <button id="zoomNext" style="
-    display:flex;
-    align-items:center;
-    justify-cintent:center;
-    position:absolute;
-    right:20px;
-    top:50%;
-    transform:translateY(-50%);
-    font-size:45px;
-    background:rgba(143, 143, 143, 0.97);
-    color:rgb(0, 0, 0);
-    border:none;
-    width:70px;
-    height:70px;
-    border-radius:8px;
-    cursor:pointer;
-    z-index:100000;
-    ">▶</button>
+        <!-- BOTÃO WHATSAPP -->
+        <button id="zoomShare" style="
+            font-size:16px;
+            padding:12px 22px;
+            background:#25D366;
+            color:#fff;
+            border:none;
+            border-radius:30px;
+            cursor:pointer;
+            font-weight:bold;
+            box-shadow:0 5px 15px rgba(0,0,0,0.5);
+        ">
+            🟢 Enviar para WhatsApp
+        </button>
+
+        <!-- BOTÃO PRÓXIMO -->
+        <button id="zoomNext" style="
+            position:absolute;
+            right:20px;
+            top:50%;
+            transform:translateY(-50%);
+            font-size:30px;
+            background:rgba(0,0,0,0.5);
+            color:#fff;
+            border:none;
+            width:55px;
+            height:65px;
+            border-radius:10px;
+            cursor:pointer;
+            z-index:100000;
+        ">▶</button>
     `;
 
     document.body.appendChild(modal);
 
-    // fechar apenas no X
+    // FECHAR SOMENTE NO X
     modal.querySelector("#zoomClose").onclick = () => modal.remove();
 
+    const imgEl = modal.querySelector("#zoomImg");
+
+    // NAVEGAÇÃO
     modal.querySelector("#zoomNext").onclick = () => {
         atual = (atual + 1) % imagens.length;
-        modal.querySelector("#zoomImg").src = imagens[atual].url;
+        imgEl.src = imagens[atual].url;
     };
 
     modal.querySelector("#zoomPrev").onclick = () => {
         atual = (atual - 1 + imagens.length) % imagens.length;
-        modal.querySelector("#zoomImg").src = imagens[atual].url;
+        imgEl.src = imagens[atual].url;
+    };
+
+    // COMPARTILHAR WHATSAPP
+    modal.querySelector("#zoomShare").onclick = () => {
+
+        const listaImagens = imagens.map(img => img.url).join("\n");
+
+        const mensagem =
+`🛍️ *${produto.descricao}*
+
+💰 *Preço:* ${dinheiroBR(produto.preco)}
+📦 Código: ${produto.nce || produto.id}
+
+📷 *Fotos:*
+${listaImagens}
+
+📲 Entre em contato para comprar!`;
+
+        const link = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
+
+        window.open(link, "_blank");
     };
 }
+
+    
 
 
 // =============================
