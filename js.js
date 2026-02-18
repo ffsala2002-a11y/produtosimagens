@@ -512,42 +512,40 @@ function prevImg(produtoId) {
 // =============================
 // RENDER CARROSSEL
 // =============================
-function renderCarousel(imagens, produtoId) {
+function renderCarousel(imagens, produto) {
+
+    const produtoId = produto.id;
+
     if (!window.carouselData) window.carouselData = {};
     window.carouselData[produtoId] = imagens || [];
 
     if (!imagens || !imagens.length) return `
     <div class="carousel" style="width:100%;height:180px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;color:#999;margin-bottom:10px;">
-    Sem imagem
+        Sem imagem
     </div>
     `;
 
     return `
     <div class="carousel" style="display:flex;align-items:center;justify-content:center;">
-    <button onclick="prevImg('${produtoId}')">◀</button>
+        <button onclick="prevImg('${produtoId}')">◀</button>
 
-    <img loading="lazy"
-    id="img-${produtoId}"
-    src="${imagens[0].url}"
+        <img id="img-${produtoId}" 
+             src="${imagens[0].url}" 
+             onclick='openZoom(${JSON.stringify(produto)}, ${carouselIndex[produtoId] || 0})'
+             style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
 
-    onclick="openZoom('${produtoId}', carouselIndex['${produtoId}'] || 0)"
-    style="width:150px;height:150px;object-fit:cover;margin:0 10px;cursor:pointer;">
-
-    <button onclick="nextImg('${produtoId}')">▶</button>
+        <button onclick="nextImg('${produtoId}')">▶</button>
     </div>
     `;
 }
 
-
 // =============================
 // ZOOM COM CARROSSEL + COMPARTILHAR TODAS AS FOTOS
 // =============================
-function openZoom(produtoId, index = 0) {
-    const imagens = (window.carouselData || {})[produtoId];
-    if (!imagens || !imagens.length) return;
+function openZoom(produto, index = 0) {
 
-    // pegar info do produto
-    const produto = window.produtosMap ? window.produtosMap[produtoId] : null;
+    const imagens = (window.carouselData || {})[produto.id];
+    if (!imagens || !imagens.length) return;
 
     let atual = index;
 
@@ -597,25 +595,18 @@ function openZoom(produtoId, index = 0) {
     ">◀</button>
 
     <img id="zoomImg" src="${imagens[atual].url}" 
-         style="
-         max-width:90%;
-         max-height:90%;
-         object-fit:contain;
-         z-index:1;
-         margin-bottom:10px;
-    ">
+         style="max-width:90%;max-height:90%;object-fit:contain;margin-bottom:10px;">
 
     <button id="zoomShare" style="
         font-size:16px;
         padding:8px 16px;
-        background:#2196f3;
+        background:#25D366;
         color:#fff;
         border:none;
         border-radius:6px;
         cursor:pointer;
-        z-index:100000;
         margin-bottom:10px;
-    ">📤 Compartilhar todas as fotos</button>
+    ">📤 Compartilhar no WhatsApp</button>
 
     <button id="zoomNext" style="
         position:absolute;
@@ -636,47 +627,37 @@ function openZoom(produtoId, index = 0) {
 
     document.body.appendChild(modal);
 
-    // fechar apenas no X
     modal.querySelector("#zoomClose").onclick = () => modal.remove();
 
-    // navegação
     const imgEl = modal.querySelector("#zoomImg");
+
     modal.querySelector("#zoomNext").onclick = () => {
         atual = (atual + 1) % imagens.length;
         imgEl.src = imagens[atual].url;
     };
+
     modal.querySelector("#zoomPrev").onclick = () => {
         atual = (atual - 1 + imagens.length) % imagens.length;
         imgEl.src = imagens[atual].url;
     };
 
-    // botão compartilhar WHATSAPP
-modal.querySelector("#zoomShare").onclick = () => {
+    // WHATSAPP SHARE
+    modal.querySelector("#zoomShare").onclick = () => {
 
-    const produto = window.produtosMap ? window.produtosMap[produtoId] : null;
-    const imagens = window.carouselData[produtoId] || [];
+        const linksImagens = imagens.map((img, i) =>
+            `📷 Foto ${i + 1}: ${img.url}`
+        ).join("\n");
 
-    if (!produto) return alert("Produto não encontrado.");
-
-    const descricao = produto.descricao;
-    const preco = produto.precoBR || produto.preco;
-
-    const linksImagens = imagens.map((img, i) => 
-        `📷 Foto ${i + 1}: ${img.url}`
-    ).join("\n");
-
-    const mensagem = 
-`*${descricao}*
-💰 Preço: ${preco}
+        const mensagem =
+`*${produto.descricao}*
+💰 Preço: ${dinheiroBR(produto.preco)}
 
 ${linksImagens}`;
 
-    const url = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
-
-    window.open(url, "_blank");
-};
+        const url = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
+        window.open(url, "_blank");
+    };
 }
-
 
 // =============================
 // DEBOUNCE (EVITA TRAVAMENTOS)
@@ -778,7 +759,7 @@ function setupAdmin() {
         mostrarModal("Importação concluída!", "#4caf50");
 
         setTimeout(() => {
-            window.location.reload(); // 🔥 atualização real
+            window.location.reload(); // atualização real
         }, 300);
 
     } catch (e) {
@@ -875,7 +856,7 @@ async function limparProdutosBanco() {
         mostrarModal("Produtos removidos com sucesso!", "#4caf50");
 
         setTimeout(() => {
-            window.location.reload(); // 🔥 RECARREGA A PÁGINA
+            window.location.reload(); //RECARREGA A PÁGINA
         }, 800);
     });
 }
