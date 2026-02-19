@@ -347,9 +347,38 @@ function parseTxt(text) {
         const precoRaw = partes[partes.length - 1];
         const saldoRaw = partes[partes.length - 3];
 
-        const preco = parseFloat((precoRaw || "").replace(",", "."));
-        const saldo = parseFloat((saldoRaw || "").replace(",", "."));
+        function limparNumero(valor) {
+            if (!valor) return 0;
 
+            valor = valor.trim();
+
+            const temVirgula = valor.includes(",");
+            const temPonto = valor.includes(".");
+
+            // Caso 1: Tem vírgula e ponto (ex: 1,344.00)
+            if (temVirgula && temPonto) {
+                if (valor.lastIndexOf(",") > valor.lastIndexOf(".")) {
+                    // Formato BR: 1.344,00
+                    valor = valor.replace(/\./g, "").replace(",", ".");
+                } else {
+                    // Formato US: 1,344.00
+                    valor = valor.replace(/,/g, "");
+                }
+            }
+
+            // Caso 2: Só vírgula (ex: 1,22 ou 1,2)
+            else if (temVirgula && !temPonto) {
+                valor = valor.replace(",", ".");
+            }
+
+            // Caso 3: Só ponto (ex: 849.00)
+            // já está correto
+
+            return parseFloat(valor) || 0;
+        }
+
+        const preco = limparNumero(precoRaw);
+        const saldo = limparNumero(saldoRaw);
         // =============================
         // DESCRIÇÃO = depois do NCE até o saldo
         // =============================
