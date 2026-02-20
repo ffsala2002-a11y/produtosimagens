@@ -705,6 +705,20 @@ function renderHome() {
     <div class="container">
     <h2>Catálago AUG</h2>
     <div id="totalCatalogo"></div>
+    <button onclick="setPage('carrinho')" class="btn-carrinho" style="position:relative;">
+  🛒 Ver Carrinho
+  <span id="contadorCarrinho" style="
+      position:absolute;
+      top:-5px;
+      right:-10px;
+      background:red;
+      color:white;
+      border-radius:50%;
+      padding:2px 6px;
+      font-size:12px;
+      font-weight:bold;
+  ">0</span>
+</button>
     <div class="box-input" style="padding: 1rem 0;">
     <input class="input" placeholder="Buscar por NCE ou DESCRIÇÃO" id="filtro" style="
     width: 300px;
@@ -742,12 +756,25 @@ function renderAdmin() {
 // =============================
 async function render() {
     const app = document.getElementById("app");
+
     if (page === "login") {
         app.innerHTML = renderLogin();
-    } else if (page === "admin") {
-        app.innerHTML = renderAdmin(); setupAdmin();
-    } else {
-        app.innerHTML = renderHome(); setupCatalogo();
+    } 
+    else if (page === "admin") {
+        app.innerHTML = renderAdmin();
+        setupAdmin();
+    }
+    else if (page === "carrinho") {
+        app.innerHTML = renderCarrinho();
+        setupCarrinho();
+    }
+    else if (page === "financiamento") {
+        app.innerHTML = renderFinanciamento();
+        calcularFinanciamento();
+    }
+    else {
+        app.innerHTML = renderHome();
+        setupCatalogo();
     }
 }
 
@@ -824,6 +851,7 @@ async function renderAdminGrid() {
 function setupCatalogo() {
     document.getElementById("filtro").oninput = debounce(renderCatalogGrid, 300);
     renderCatalogGrid();
+    atualizarContadorCarrinho();
 }
 
 
@@ -838,12 +866,40 @@ async function renderCatalogGrid() {
 
     document.getElementById("catalogGrid").innerHTML = produtos.map(p => {
         const imagens = p.produto_imagens || [];
-        return `<div class="card">${renderCarousel(imagens, p.id)}<b>${p.descricao}</b>
-        <div class="small">NCE ${p.nce}<br>Saldo ${p.saldo}<br><b>${dinheiroBR(p.preco)}</b></div></div>`;
+        return `
+<div class="card">
+    ${renderCarousel(imagens, p.id)}
+
+    <b>${p.descricao}</b>
+
+    <div class="small">
+        NCE ${p.nce}<br>
+        Saldo ${p.saldo}<br>
+        <b>${dinheiroBR(p.preco)}</b>
+    </div>
+
+    <br>
+
+    <button 
+        onclick="addCarrinho('${p.id}')"
+        style="
+            color:#000000;
+            border:none;
+            padding:8px 12px;
+            border-radius:5px;
+            cursor:pointer;
+            font-weight:bold;
+            width:100%;
+        ">
+        🛒 Adicionar ao carrinho
+    </button>
+</div>
+`;
     }).join("");
 
     hideLoading();
-}
+    atualizarContadorCarrinho(); // badge sempre atualizado
+        }
 
 // =============================
 // LIMPAR PRODUTOS
@@ -928,8 +984,275 @@ async function religarImagensPorNCE() {
     await renderAdminGrid();
 }
 
+
+// ===============================
+// CARRINHO
+// ===============================
+
+function renderCarrinho(){
+    return `
+    <div class="container">
+        <h2>🛒 Carrinho</h2>
+
+        <button onclick="setPage('home')">
+            ← Voltar
+        </button>
+
+        <br><br>
+
+        <div id="listaCarrinho"></div>
+
+        <br>
+
+        <button onclick="setPage('financiamento')">
+            Ir para Financiamento
+        </button>
+    </div>
+    `;
+}
+
+function setupCarrinho() {
+    const lista = document.getElementById("listaCarrinho");
+    let carrinho = JSON.parse(localStorage.getItem("carrinho") || "[]");
+
+    if(carrinho.length === 0){
+    lista.innerHTML = "<p>Seu carrinho está vazio.</p>";
+    atualizarContadorCarrinho(); // badge fica 0
+    return;
+}
+
+    fetchProdutosCarrinho(carrinho).then(produtos => {
+        lista.innerHTML = "";
+        let totalCarrinho = 0;
+
+        carrinho.forEach(item => {
+            const produto = produtos.find(p => p.id === item.id);
+            if (!produto) return;
+
+            const subtotal = produto.preco * item.qtd;
+            totalCarrinho += subtotal;
+
+            lista.innerHTML += `
+            <div class="card" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;" id="item-${produto.id}">
+                <div>
+                    <b>${produto.descricao}</b><br>
+                    Preço unitário: ${dinheiroBR(produto.preco)}<br>
+                    Subtotal: <span id="subtotal-${produto.id}">${dinheiroBR(subtotal)}</span>
+                </div>
+
+                <div>
+                    <button onclick="diminuirQtd('${produto.id}', ${produto.preco})">-</button>
+                    <span id="qtd-${produto.id}" style="margin:0 5px;">${item.qtd}</span>
+                    <button onclick="aumentarQtd('${produto.id}', ${produto.preco})">+</button>
+                    <button onclick="removerCarrinho('${produto.id}')">Remover</button>
+                </div>
+            </div>
+            `;
+        });
+
+        // total final
+        lista.innerHTML += `
+        <div style="margin-top:20px; font-weight:bold; font-size:18px;">
+            Total: <span id="totalCarrinho">${dinheiroBR(totalCarrinho)}</span>
+        </div>
+        `;
+
+        atualizarContadorCarrinho();
+    });
+}
+
+// função auxiliar para buscar produtos do banco
+async function fetchProdutosCarrinho(carrinho){
+    const { data: produtos } = await supabase.from("produtos").select("*");
+    return produtos;
+}
+function removerCarrinho(id, diminuir = false) {
+    let carrinho = JSON.parse(localStorage.getItem("carrinho") || "[]");
+
+    const item = carrinho.find(p => p.id === id);
+    if (!item) return;
+
+    if (diminuir && item.qtd > 1) {
+        item.qtd--; // diminui quantidade
+    } else {
+        // remove completamente
+        carrinho = carrinho.filter(p => p.id !== id);
+    }
+
+    localStorage.setItem("carrinho", JSON.stringify(carrinho));
+    render(); // re-renderiza carrinho
+    atualizarContadorCarrinho();
+}
+
+// ===============================
+// FINANCIAMENTO
+// ===============================
+
+function renderFinanciamento(){
+    return `
+    <div class="container">
+        <h2>💰 Financiamento</h2>
+
+        <button onclick="setPage('carrinho')">
+            ← Voltar
+        </button>
+
+        <br><br>
+
+        Taxa de juros (%):
+        <input id="taxa" value="11.9" oninput="calcularFinanciamentoLoja()">
+
+        <br><br>
+
+        Entrada:
+        <input id="entrada" value="0" oninput="calcularFinanciamentoLoja()">
+
+        <br><br>
+
+        Parcelas:
+        <select id="parcelas" onchange="calcularFinanciamentoLoja()">
+            ${[...Array(12)].map((_,i)=>
+                `<option value="${i+1}">${i+1}x</option>`
+            ).join("")}
+        </select>
+
+        <div id="resultadoFinanciamento"></div>
+    </div>
+    `;
+}
+
+
+async function calcularFinanciamentoLoja() {
+    let carrinho = JSON.parse(localStorage.getItem("carrinho") || "[]");
+
+    const entrada = parseFloat(document.getElementById("entrada").value) || 0;
+    const parcelas = parseInt(document.getElementById("parcelas").value);
+
+    if (!parcelas) return;
+
+    // pega produtos
+    const { data: produtos } = await supabase.from("produtos").select("*");
+    let totalProdutos = 0;
+
+    carrinho.forEach(item => {
+        const produto = produtos.find(p => p.id === item.id);
+        if(produto) totalProdutos += parseFloat(produto.preco) * item.qtd;
+    });
+
+    // tabela de multiplicadores da loja (exemplo)
+    const tabelaFatores = {
+        1: 1.0,
+        2: 1.2,
+        3: 1.3,
+        4: 1.4,
+        5: 1.5,
+        6: 1.6,
+        7: 1.7,
+        8: 1.8,
+        9: 1.9,
+        10: 2.07,
+        11: 2.1,
+        12: 2.2
+    };
+
+    const fator = tabelaFatores[parcelas] || 1.0;
+
+    const totalContrato = totalProdutos * fator - entrada;
+    const valorParcela = totalContrato / parcelas;
+
+    // calcula juros como diferença do contrato menos o valor financiado
+    const juros = totalContrato - (totalProdutos - entrada);
+
+    document.getElementById("resultadoFinanciamento").innerHTML = `
+        <br>
+        Valor financiado: ${dinheiroBR(totalProdutos)}<br>
+        Entrada: ${dinheiroBR(entrada)}<br>
+        Parcelas: ${parcelas}x de ${dinheiroBR(valorParcela)}<br>
+        Juros: ${dinheiroBR(juros)}<br>
+        <b>Total do contrato: ${dinheiroBR(totalContrato)}</b>
+    `;
+}
+
+function addCarrinho(id) {
+    let carrinho = JSON.parse(localStorage.getItem("carrinho") || "[]");
+
+    const item = carrinho.find(p => p.id === id);
+    if (item) {
+        // se já existe, aumenta a quantidade
+        item.qtd++;
+    } else {
+        carrinho.push({ id, qtd: 1 });
+    }
+
+    localStorage.setItem("carrinho", JSON.stringify(carrinho));
+    mostrarModal("Produto adicionado!", "#4caf50");
+    atualizarContadorCarrinho();
+}
+
+function atualizarTotalCarrinho() {
+    const carrinho = JSON.parse(localStorage.getItem("carrinho") || "[]");
+    fetchProdutosCarrinho(carrinho).then(produtos => {
+        let total = 0;
+        carrinho.forEach(item => {
+            const produto = produtos.find(p => p.id === item.id);
+            if (!produto) return;
+            total += produto.preco * item.qtd;
+        });
+        const el = document.getElementById("totalCarrinho");
+        if(el) el.textContent = dinheiroBR(total);
+    });
+}
+
+function aumentarQtd(id, preco) {
+    let carrinho = JSON.parse(localStorage.getItem("carrinho") || "[]");
+    const item = carrinho.find(p => p.id === id);
+    if (!item) return;
+
+    item.qtd++;
+    localStorage.setItem("carrinho", JSON.stringify(carrinho));
+
+    // atualiza DOM
+    document.getElementById(`qtd-${id}`).textContent = item.qtd;
+    document.getElementById(`subtotal-${id}`).textContent = dinheiroBR(item.qtd * preco);
+
+    atualizarTotalCarrinho();
+    atualizarContadorCarrinho();
+}
+
+function diminuirQtd(id, preco) {
+    let carrinho = JSON.parse(localStorage.getItem("carrinho") || "[]");
+    const item = carrinho.find(p => p.id === id);
+
+    if (!item) return;
+
+    if (item.qtd > 1) {
+        item.qtd--;
+    } else {
+        // remove completamente
+        carrinho = carrinho.filter(p => p.id !== id);
+        const elem = document.getElementById(`item-${id}`);
+        if (elem) elem.remove();
+    }
+
+    localStorage.setItem("carrinho", JSON.stringify(carrinho));
+
+    // Atualiza subtotal e total
+    if(item.qtd > 0){
+        document.getElementById(`qtd-${id}`).textContent = item.qtd;
+        document.getElementById(`subtotal-${id}`).textContent = dinheiroBR(item.qtd * preco);
+    }
+
+    atualizarTotalCarrinho();
+    atualizarContadorCarrinho();
+}
+
+function atualizarContadorCarrinho() {
+    const carrinho = JSON.parse(localStorage.getItem("carrinho") || "[]");
+    const badge = document.getElementById("contadorCarrinho");
+    if(badge) badge.textContent = carrinho.length || 0;
+}
+
 // =============================
 // START
 // =============================
 setPage("home");
-  
