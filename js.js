@@ -1133,7 +1133,7 @@ function atualizarContadorCarrinho() {
 // ===============================
 // FINANCIAMENTO AUTOMÁTICO LOJA
 // ===============================
-function renderFinanciamento(){
+function renderFinanciamento() {
     return `
     <div class="container">
         <h2>💰 Financiamento</h2>
@@ -1151,21 +1151,23 @@ function renderFinanciamento(){
 
         Parcelas:
         <select id="parcelas" onchange="calcularFinanciamentoLoja()">
-            ${[...Array(12)].map((_,i)=> `<option value="${i+1}">${i+1}x</option>`).join("")}
+            ${[...Array(12)].map((_, i) => `<option value="${i + 1}">${i + 1}x</option>`).join("")}
         </select>
 
         <div id="resultadoFinanciamento" style="margin-top:20px; font-weight:bold;"></div>
     </div>`;
 }
 
+// Formata o input de entrada em reais e recalcula
 function formatarEntrada() {
     const input = document.getElementById("entrada");
-    let valor = input.value.replace(/\D/g, "");
-    let numero = parseFloat(valor)/100 || 0;
+    let valor = input.value.replace(/\D/g, ""); // remove tudo que não for número
+    let numero = parseFloat(valor) / 100 || 0;   // converte centavos
     input.value = numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     calcularFinanciamentoLoja();
 }
 
+// Calcula financiamento com base na tabela de coeficientes da loja
 async function calcularFinanciamentoLoja() {
     const carrinho = JSON.parse(localStorage.getItem("carrinho") || "[]");
     if (carrinho.length === 0) {
@@ -1173,10 +1175,14 @@ async function calcularFinanciamentoLoja() {
         return;
     }
 
-    const entrada = parseFloat(document.getElementById("entrada").value.replace(/\D/g,""))/100 || 0;
-    const parcelas = parseInt(document.getElementById("parcelas").value) || 1;
-    const taxa = parseFloat(document.getElementById("taxa").value)/100 || 0;
+    // entrada em número
+    const entradaStr = document.getElementById("entrada").value.replace(/\D/g,"");
+    const entrada = parseFloat(entradaStr)/100 || 0;
 
+    // número de parcelas
+    const parcelas = parseInt(document.getElementById("parcelas").value) || 1;
+
+    // busca produtos
     const { data: produtos } = await supabase.from("produtos").select("*");
     let totalProdutos = 0;
     carrinho.forEach(item => {
@@ -1184,24 +1190,126 @@ async function calcularFinanciamentoLoja() {
         if(produto) totalProdutos += parseFloat(produto.preco) * item.qtd;
     });
 
-    // Tabela de fatores da loja
-    const tabelaFatores = {
-        1: 1.0, 2: 1.2, 3: 1.3, 4: 1.4, 5: 1.5, 6: 1.6,
-        7: 1.7, 8: 1.8, 9: 1.9, 10: 2.07, 11: 2.1, 12: 2.2
+    // tabela de coeficientes reais 11,9% (exemplo)
+    const tabelaCoeficientes = {
+        1: 1,     // 1 parcela = preço à vista
+        2: 1,     // 2 parcelas = preço à vista
+        3: 1,     // 3 parcelas = preço à vista
+        4: 0.3285,
+        5: 0.2767,
+        6: 0.2425,
+        7: 0.2184,
+        8: 0.2006,
+        9: 0.1870,
+        10: 0.1763,
+        11: 0.1677,
+        12: 0.16    // exemplo, ajuste conforme tabela real da loja
     };
-    const fator = tabelaFatores[parcelas] || 1.0;
 
-    const totalContrato = totalProdutos * fator - entrada;
-    const valorParcela = totalContrato / parcelas;
+    // pega coeficiente para a quantidade de parcelas
+    const coef = tabelaCoeficientes[parcelas] || 1;
+
+    // calcula valor da parcela e total do contrato
+    let valorParcela = totalProdutos * coef;
+    let totalContrato = valorParcela * parcelas;
+
+    // calcula juros aplicado
     const juros = totalContrato - (totalProdutos - entrada);
 
+    // mostra resultado formatado
     document.getElementById("resultadoFinanciamento").innerHTML = `
-    Valor financiado: ${dinheiroBR(totalProdutos)}<br>
-    Entrada: ${dinheiroBR(entrada)}<br>
-    Parcelas: ${parcelas}x de ${dinheiroBR(valorParcela)}<br>
-    Juros: ${dinheiroBR(juros)}<br>
-    <b>Total do contrato: ${dinheiroBR(totalContrato)}</b>`;
-                }
+        Valor financiado: ${totalProdutos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}<br>
+        Entrada: ${entrada.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}<br>
+        Parcelas: ${parcelas}x de ${valorParcela.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}<br>
+        Juros: ${juros.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}<br>
+        <b>Total do contrato: ${totalContrato.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</b>
+    `;
+}
+
+// Função para formatar a entrada em real brasileiro e recalcular
+function formatarEntrada() {
+    const input = document.getElementById("entrada");
+    let valor = input.value;
+
+    // Remove tudo que não for número
+    valor = valor.replace(/\D/g, "");
+
+    // Converte para número em centavos
+    let numero = parseFloat(valor) / 100 || 0;
+
+    // Atualiza input formatado em real
+    input.value = numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    // Recalcula financiamento automaticamente
+    calcularFinanciamentoLoja();
+}
+
+// Função principal de cálculo usando coeficientes reais da loja
+async function calcularFinanciamentoLoja() {
+    const carrinho = JSON.parse(localStorage.getItem("carrinho") || "[]");
+    if (carrinho.length === 0) {
+        document.getElementById("resultadoFinanciamento").innerHTML = "<b>Seu carrinho está vazio</b>";
+        return;
+    }
+
+    // Entrada
+    const entradaStr = document.getElementById("entrada").value.replace(/\D/g,"");
+    const entrada = parseFloat(entradaStr)/100 || 0;
+
+    const parcelas = parseInt(document.getElementById("parcelas").value) || 1;
+
+    // Busca produtos do carrinho
+    const { data: produtos } = await supabase.from("produtos").select("*");
+    let totalProdutos = 0;
+    carrinho.forEach(item => {
+        const produto = produtos.find(p => p.id === item.id);
+        if (produto) totalProdutos += parseFloat(produto.preco) * item.qtd;
+    });
+
+    const valorFinanciado = totalProdutos - entrada;
+    if (valorFinanciado <= 0) {
+        document.getElementById("resultadoFinanciamento").innerHTML = "<b>Valor do financiamento inválido</b>";
+        return;
+    }
+
+    // Coeficientes reais 11,9% (igual sistema da loja)
+    const coeficientes = {
+        1: 1.0, // parcelas 1-3 preço à vista
+        2: 1.0,
+        3: 1.0,
+        4: 0.3285,
+        5: 0.2767,
+        6: 0.2425,
+        7: 0.2184,
+        8: 0.2006,
+        9: 0.1870,
+        10: 0.1763,
+        11: 0.1677,
+        12: 0.1600 // ajuste se necessário
+    };
+
+    const coef = coeficientes[parcelas] || 1.0;
+
+    let valorParcela, totalContrato;
+
+    if (parcelas <= 3) {
+        valorParcela = valorFinanciado / parcelas;
+        totalContrato = valorFinanciado;
+    } else {
+        valorParcela = valorFinanciado * coef;
+        totalContrato = valorParcela * parcelas;
+    }
+
+    const juros = totalContrato - valorFinanciado;
+
+    document.getElementById("resultadoFinanciamento").innerHTML = `
+        Valor financiado: ${valorFinanciado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}<br>
+        Entrada: ${entrada.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}<br>
+        Parcelas: ${parcelas}x de ${valorParcela.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}<br>
+        Juros: ${juros.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}<br>
+        <b>Total do contrato: ${totalContrato.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</b>
+    `;
+} 
 
 
 // =============================
