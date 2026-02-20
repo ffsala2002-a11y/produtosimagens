@@ -124,3 +124,123 @@ button{
     background-color: rgba(122, 122, 122, 0.86);
 }
 
+
+
+/* ===============================
+RESPONSIVO MOBILE
+=============================== */
+
+/* Evita scroll lateral */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Remove 100vw que causa bug */
+#box-catalago,
+#box-admin {
+  width: 100%;
+}
+
+/* Remove alturas fixas */
+#catalogGrid,
+#adminGrid {
+  height: auto;
+  min-height: 60vh;
+}
+
+/* Inputs sempre 100% no mobile */
+.input {
+  width: 100%;
+}
+
+/* Botões sempre ocupando largura total no mobile */
+button {
+  width: 100%;
+  margin-top: 5px;
+}
+
+/* Header quebra linha */
+.header {
+  flex-wrap: wrap;
+}
+
+/* Grid mais compacto */
+.grid {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+/* Ajuste de imagens */
+.card img {
+  height: 140px;
+}
+
+/* ===============================
+MOBILE ESPECÍFICO
+=============================== */
+@media (max-width: 768px) {
+
+  .container {
+    padding: 15px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  /* Carrinho empilhado */
+  #listaCarrinho .card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  #listaCarrinho .card div:last-child {
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  /* Zoom mais adequado no celular */
+  #zoomClose {
+    width: 50px !important;
+    height: 50px !important;
+    font-size: 18px !important;
+    top: 20px !important;
+    right: 20px !important;
+  }
+
+  #zoomPrev,
+  #zoomNext {
+    width: 45px !important;
+    height: 45px !important;
+    font-size: 25px !important;
+  }
+
+  #zoomImg {
+    max-width: 90% !important;
+    max-height: 70% !important;
+  }
+
+  /* Botão carrinho fixo no mobile */
+  .btn-carrinho {
+    position: fixed !important;
+    bottom: 20px;
+    right: 20px;
+    width: auto !important;
+    padding: 12px 18px !important;
+    border-radius: 50px !important;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+
+}
