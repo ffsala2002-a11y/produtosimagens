@@ -703,7 +703,7 @@ function renderLogin() {
 function renderHome() {
     return `
     <div class="container">
-    <h2>Catálago AUG</h2>
+    <h2>Sistema Catálogo Finance AUG</h2>
     <div id="totalCatalogo"></div>
     <button onclick="setPage('carrinho')" class="btn-carrinho" style="position:relative;">
   🛒 Ver Carrinho
